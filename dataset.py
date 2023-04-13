@@ -24,7 +24,7 @@ class LinearDynamicalDataset(IterableDataset):
             u = np.random.randn(self.nu, self.seq_len).astype(self.dtype)  # C, T as python-control wants
             y = control.forced_response(sys, T=None, U=u, X0=0.0)
             u = u.transpose()  # T, C
-            y = y.y.transpose()  # T, C
+            y = y.y.transpose().astype(self.dtype)  # T, C
             yield torch.tensor(y), torch.tensor(u)
 
 
