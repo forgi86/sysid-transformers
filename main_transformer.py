@@ -74,17 +74,20 @@ if __name__ == '__main__':
     LOSS = []
     for itr, (batch_y, batch_u) in tqdm.tqdm(enumerate(train_dl)):
 
-        optimizer.zero_grad()
-        batch_y = batch_y.pin_memory().to(device, non_blocking=True)
-        batch_u = batch_u.pin_memory().to(device, non_blocking=True)
+        if device_type == "cuda":
+            batch_y = batch_y.pin_memory().to(device, non_blocking=True)
+            batch_u = batch_u.pin_memory().to(device, non_blocking=True)
         batch_y_pred, loss = model(batch_u, batch_y)
         LOSS.append(loss.item())
         if itr % 100 == 0:
             print(f"\n{itr=} {loss=:.2f}\n")
-        if itr == max_iter-1:
-            break
+
         loss.backward()
         optimizer.step()
+        optimizer.zero_grad()
+
+        if itr == max_iter-1:
+            break
 
     time_loop = time.time() - time_start
     print(f"\n{time_loop=:.2f} seconds.")
