@@ -8,7 +8,7 @@ from model_ts import GPTConfig, GPT
 import tqdm
 import argparse
 
-# Press the green button in the gutter to run the script.
+
 if __name__ == '__main__':
 
     # Overall settings
@@ -97,6 +97,7 @@ if __name__ == '__main__':
         'model': model.state_dict(),
         'optimizer': optimizer.state_dict(),
         'model_args': model_args,
+        'train_time': time_loop
     }
     torch.save(checkpoint, out_dir/"ckpt.pt")
     
