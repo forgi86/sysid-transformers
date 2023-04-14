@@ -5,7 +5,7 @@ import control  # pip install python-control, pip install slycot (optional)
 
 
 class LinearDynamicalDataset(IterableDataset):
-    def __init__(self, nx=5, nu=1, ny=1, seq_len=500, strictly_proper=True, dtype="float32"):
+    def __init__(self, nx=5, nu=1, ny=1, seq_len=500, strictly_proper=True, dtype="float32", normalize=True):
         super(LinearDynamicalDataset).__init__()
         self.nx = nx
         self.nu = nu
@@ -13,6 +13,7 @@ class LinearDynamicalDataset(IterableDataset):
         self.seq_len = seq_len
         self.strictly_proper = strictly_proper
         self.dtype = dtype
+        self.normalize = normalize
 
     def __iter__(self):
         while True:  # infinite dataset
@@ -25,6 +26,9 @@ class LinearDynamicalDataset(IterableDataset):
             y = control.forced_response(sys, T=None, U=u, X0=0.0)
             u = u.transpose()  # T, C
             y = y.y.transpose().astype(self.dtype)  # T, C
+            if self.normalize:
+                y = (y - y.mean(axis=0))/(y.std(axis=0))
+
             yield torch.tensor(y), torch.tensor(u)
 
 
