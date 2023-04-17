@@ -198,7 +198,7 @@ class GPT(nn.Module):
         if compute_loss:
             # if we are given some desired targets also calculate the loss
             batch_y_pred = self.lm_head(x)
-            loss = F.mse_loss(batch_y_pred[:, :-1, :],+ batch_y[:, 1:, :])
+            loss = F.mse_loss(batch_y[:, 1:, :], batch_y_pred[:, :-1, :])
             #loss = F.cross_entropy(batch_y_pred.view(-1, batch_y_pred.size(-1)), targets.view(-1), ignore_index=-1)
         else:
             # inference-time mini-optimization: only forward the lm_head on the very last position

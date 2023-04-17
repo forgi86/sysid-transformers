@@ -34,6 +34,7 @@ if __name__ == '__main__':
     beta1 = 0.9
     beta2 = 0.95
     max_iter = 100_000
+    batch_size = 32
 
 
     # Compute settings
@@ -41,6 +42,10 @@ if __name__ == '__main__':
     no_cuda = False
     threads = 5
     compile = True
+
+    # %% Set seed for reproducibility
+    torch.manual_seed(42)
+    np.random.seed(43)
 
     # Create out dir
     out_dir = Path(out_dir)
@@ -58,7 +63,7 @@ if __name__ == '__main__':
 
     # Create data loader
     train_ds = LinearDynamicalDataset(nx=nx, nu=nu, ny=ny, seq_len=seq_len)
-    train_dl = DataLoader(train_ds, batch_size=32, num_workers=threads)
+    train_dl = DataLoader(train_ds, batch_size=batch_size, num_workers=threads)
 
     model_args = dict(n_layer=n_layer, n_head=n_head, n_embd=n_embd, n_y=1, n_u=1, block_size=block_size,
                       bias=bias, dropout=dropout)  # start with model_args from command line
@@ -98,7 +103,7 @@ if __name__ == '__main__':
         'optimizer': optimizer.state_dict(),
         'model_args': model_args,
         'train_time': time_loop,
-        'LOSS': LOSS
+        'LOSS': LOSS,
     }
     torch.save(checkpoint, out_dir/"ckpt.pt")
     
