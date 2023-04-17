@@ -2,6 +2,7 @@ from pathlib import Path
 import time
 import torch
 import numpy as np
+import math
 from dataset import LinearDynamicalDataset
 from torch.utils.data import DataLoader
 from model_ts import GPTConfig, GPT
@@ -18,7 +19,7 @@ if __name__ == '__main__':
     nx = 10
     nu = 1
     ny = 1
-    seq_len = 500
+    seq_len = 400
 
     # Transformer settings
     block_size = seq_len
@@ -29,11 +30,15 @@ if __name__ == '__main__':
     bias = False
 
     # Optimization settings
+    learning_rate = 1e-4 # 6e-4
+    decay_lr = True
     weight_decay = 1e-1
-    learning_rate = 1e-4
     beta1 = 0.9
     beta2 = 0.95
-    max_iter = 100_000
+    warmup_iters = 2000
+    max_iter = 500_000 # 600_000
+    lr_decay_iters = 500_000
+    min_lr = 1e-5 # 6e-5
     batch_size = 32
 
 
@@ -72,26 +77,45 @@ if __name__ == '__main__':
     if compile:
         model = torch.compile(model)  # requires PyTorch 2.0
 
-    optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate)
+    optimizer = model.configure_optimizers(weight_decay, learning_rate, (beta1, beta2), device_type)
+    #optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate)
+
+    def get_lr(it):
+        # 1) linear warmup for warmup_iters steps
+        if it < warmup_iters:
+            return learning_rate * it / warmup_iters
+        # 2) if it > lr_decay_iters, return min learning rate
+        if it > lr_decay_iters:
+            return min_lr
+        # 3) in between, use cosine decay down to min learning rate
+        decay_ratio = (it - warmup_iters) / (lr_decay_iters - warmup_iters)
+        assert 0 <= decay_ratio <= 1
+        coeff = 0.5 * (1.0 + math.cos(math.pi * decay_ratio)) # coeff ranges 0..1
+        return min_lr + coeff * (learning_rate - min_lr)
 
     # Training loop
     time_start = time.time()
     LOSS = []
-    for itr, (batch_y, batch_u) in tqdm.tqdm(enumerate(train_dl)):
+    for iter_num, (batch_y, batch_u) in tqdm.tqdm(enumerate(train_dl)):
+
+        # determine and set the learning rate for this iteration
+        lr = get_lr(iter_num) if decay_lr else learning_rate
+        for param_group in optimizer.param_groups:
+            param_group['lr'] = lr
 
         if device_type == "cuda":
             batch_y = batch_y.pin_memory().to(device, non_blocking=True)
             batch_u = batch_u.pin_memory().to(device, non_blocking=True)
         batch_y_pred, loss = model(batch_u, batch_y)
         LOSS.append(loss.item())
-        if itr % 100 == 0:
-            print(f"\n{itr=} {loss=:.2f}\n")
+        if iter_num % 100 == 0:
+            print(f"\n{iter_num=} {loss=:.4f}\n")
 
         loss.backward()
         optimizer.step()
         optimizer.zero_grad()
 
-        if itr == max_iter-1:
+        if iter_num == max_iter-1:
             break
 
     time_loop = time.time() - time_start
@@ -100,6 +124,7 @@ if __name__ == '__main__':
     # Save results
     checkpoint = {
         'model': model.state_dict(),
+        'model_args': model_args,
         'optimizer': optimizer.state_dict(),
         'model_args': model_args,
         'train_time': time_loop,
