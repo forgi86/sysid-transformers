@@ -30,15 +30,15 @@ if __name__ == '__main__':
     bias = False
 
     # Optimization settings
-    learning_rate = 1e-4 # 6e-4
+    learning_rate = 6e-4
     decay_lr = True
     weight_decay = 1e-1
     beta1 = 0.9
     beta2 = 0.95
     warmup_iters = 2000
-    max_iter = 500_000 # 600_000
-    lr_decay_iters = 500_000
-    min_lr = 1e-5 # 6e-5
+    max_iter = 300_000 # 600_000
+    lr_decay_iters = max_iter
+    min_lr = learning_rate/10.0
     batch_size = 32
 
 
