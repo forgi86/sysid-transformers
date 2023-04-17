@@ -97,7 +97,8 @@ if __name__ == '__main__':
         'model': model.state_dict(),
         'optimizer': optimizer.state_dict(),
         'model_args': model_args,
-        'train_time': time_loop
+        'train_time': time_loop,
+        'LOSS': LOSS
     }
     torch.save(checkpoint, out_dir/"ckpt.pt")
     
