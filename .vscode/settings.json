@@ -1,0 +1,39 @@
+/* 
+A settings.json file for VSCode reproducing some PyCharm defaults I like:
+
+   * Automatially add the "Project Root" (aka Workspace Folder) to the PYTHONPATH
+   * Execute scripts in the folder where the script is
+   * Run scripts in an interactive console (either python or ipython)
+
+If you are used to PyCharm (or a scientific programming language like MATLAB), you are also probably going to like these settings.
+
+To apply the settings to a specific project, save this file in the .vscode folder in the Project Root.
+To apply them globally, use it in your user settings file, see https://code.visualstudio.com/docs/getstarted/settings 
+for further details. 
+*/
+
+{
+    // Add the "Workspace Folder" to the PYTHONPATH
+    "terminal.integrated.env.linux": {"PYTHONPATH": "${workspaceFolder}"}, // note: there are similar .osx and .windows variables for mac and windows
+
+    // Run python scripts in the file where the script is
+    "python.terminal.executeInFileDir": true,
+    
+    
+    // Similar to PyCharm's "Run with Python Console" option
+    //"python.terminal.launchArgs": [
+    //  "-i",
+    //],
+
+
+    //Similar to PyCharm's "Run with Python Console" option, with IPython.
+    //To kill the console, either click CTRL+D or type "quit" in the console
+    
+     "python.terminal.launchArgs": [
+       "-m",
+       "IPython",
+       "-i",
+       "--no-autoindent",
+    ],
+        
+}
