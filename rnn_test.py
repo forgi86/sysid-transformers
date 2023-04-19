@@ -60,24 +60,29 @@ nu = 2
 ny = 1
 seq_length = 500
 max_iters = 100
-
-train_ds = LinearDynamicalDataset(nx=nx, nu=nu, ny=ny, seq_len=seq_length)
-train_dl = DataLoader(train_ds, batch_size=1, num_workers=0)
+batch_size = 1
+train_ds = LinearDynamicalDataset(nx=nx, nu=nu, ny=ny, seq_len=seq_length, normalize=True)
+train_dl = DataLoader(train_ds, batch_size=batch_size, num_workers=0)
 
 # Instantiate the model with hyperparameters
-model = Model(input_size=2, output_size=1, hidden_dim=128, n_layers=1)
+model = Model(input_size=nu, output_size=ny, hidden_dim=128, n_layers=1)
 # We'll also set the model to the device that we defined earlier (default is CPU)
 model.to(device)
 
 # Define hyperparameters
 n_epochs = 100
-lr=0.01
+lr = 0.001
 
 # Define Loss, Optimizer
 criterion = nn.MSELoss()
 optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 
+model.train()
 for itr, (batch_y, batch_u) in enumerate(train_dl):
+
+    if itr >= 50:
+        break
+
     # fig, ax = plt.subplots(3, 1, sharex=True)
     # ax[0].set_title("Input 1")
     # ax[0].plot(batch_u[0][:, 0])
@@ -88,27 +93,57 @@ for itr, (batch_y, batch_u) in enumerate(train_dl):
     #
     # plt.show()
 
-    # input_seq = batch_u[:, :, 0]
-    # target_seq = batch_y[:, :, 0]
-
     input_seq = batch_u
+    # input_y = batch_y[:, 1:seq_length, :]
+    # zeros = torch.zeros([batch_size, 1, ny])
+    # input_y = torch.cat((zeros, input_y), dim=1)
+    # input_seq = torch.cat((input_seq, input_y), dim=2)
+
     target_seq = batch_y[:, :, 0]
-
-    mean, std, var = torch.mean(target_seq), torch.std(target_seq), torch.var(target_seq)
-
-    target_seq = (target_seq - mean) / std
-
 
     # Training Run
     for epoch in range(1, n_epochs + 1):
         optimizer.zero_grad()  # Clears existing gradients from previous epoch
         input_seq.to(device)
         output, hidden = model(input_seq)
-        a = target_seq.view(-1).float()
-        loss = criterion(output[:, 0], a)
+        tgt = target_seq.view(-1).float()
+        loss = criterion(output[:, 0], tgt)
         loss.backward()  # Does backpropagation and calculates gradients
         optimizer.step()  # Updates the weights accordingly
 
         if epoch % 10 == 0:
-            print('Epoch: {}/{}.............'.format(epoch, n_epochs), end=' ')
+            print('Itr: {}, Epoch: {}/{}.............'.format(itr, epoch, n_epochs), end=' ')
             print("Loss: {:.4f}".format(loss.item()))
+
+
+test_ds = LinearDynamicalDataset(nx=nx, nu=nu, ny=ny, seq_len=seq_length, normalize=True)
+test_dl = DataLoader(test_ds, batch_size=1, num_workers=0)
+model.eval()
+for itr, (batch_y, batch_u) in enumerate(test_dl):
+
+    input_seq = batch_u
+    # zeros = torch.zeros([1, seq_length, ny])
+    # input_seq = torch.cat((input_seq, zeros), dim=2)
+
+    target_seq = batch_y[:, :, 0]
+
+    output, hidden = model(input_seq)
+
+    # results = []
+    # for i in range(seq_length-1):
+    #     seq = input_seq[:, 0:i+1, :]
+    #     output, hidden = model(seq)
+    #     results.append(output[-1][0].detach().numpy())
+    #     input_seq[:, i+1, :] = output[-1][0]
+
+    fig, ax = plt.subplots(3, 1, sharex=True)
+    ax[0].set_title("Input 1kk")
+    ax[0].plot(batch_u[0][:, 0])
+    ax[1].set_title("Input 2")
+    ax[1].plot(batch_u[0][:, 1])
+    ax[2].set_title("Output")
+    ax[2].plot(batch_y[0])
+    ax[2].plot(output[:, 0].detach().numpy(), c='red')
+
+    plt.show()
+
