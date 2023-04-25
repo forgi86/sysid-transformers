@@ -28,9 +28,12 @@ class Model(nn.Module):
 
         # Defining the layers
         # RNN Layer
-        self.rnn = nn.RNN(input_size, hidden_dim, n_layers, batch_first=True)
+        self.rnn = nn.RNN(input_size, hidden_dim, n_layers, batch_first=True, dropout=0.15)
         # Fully connected layer
         self.fc = nn.Linear(hidden_dim, output_size)
+
+        self.droput = nn.Dropout(0.15)
+
 
     def forward(self, x):
         batch_size = x.size(0)
@@ -43,6 +46,8 @@ class Model(nn.Module):
 
         # Reshaping the outputs such that it can be fit into the fully connected layer
         out = out.contiguous().view(-1, self.hidden_dim)
+
+        out = self.droput(out)
         out = self.fc(out)
 
         return out, hidden
@@ -55,17 +60,17 @@ class Model(nn.Module):
 
 
 # arguments
-nx = 3
-nu = 2
+nx = 10
+nu = 1
 ny = 1
-seq_length = 500
-max_iters = 100
-batch_size = 1
+seq_length = 100
+max_iters = 200
+batch_size = 64
 train_ds = LinearDynamicalDataset(nx=nx, nu=nu, ny=ny, seq_len=seq_length, normalize=True)
 train_dl = DataLoader(train_ds, batch_size=batch_size, num_workers=0)
 
 # Instantiate the model with hyperparameters
-model = Model(input_size=nu, output_size=ny, hidden_dim=128, n_layers=1)
+model = Model(input_size=nu+ny, output_size=ny, hidden_dim=256, n_layers=2)
 # We'll also set the model to the device that we defined earlier (default is CPU)
 model.to(device)
 
@@ -75,12 +80,12 @@ lr = 0.001
 
 # Define Loss, Optimizer
 criterion = nn.MSELoss()
-optimizer = torch.optim.Adam(model.parameters(), lr=lr)
+optimizer = torch.optim.SGD(model.parameters(), lr=lr)
 
 model.train()
 for itr, (batch_y, batch_u) in enumerate(train_dl):
 
-    if itr >= 50:
+    if itr >= max_iters:
         break
 
     # fig, ax = plt.subplots(3, 1, sharex=True)
@@ -94,10 +99,10 @@ for itr, (batch_y, batch_u) in enumerate(train_dl):
     # plt.show()
 
     input_seq = batch_u
-    # input_y = batch_y[:, 1:seq_length, :]
-    # zeros = torch.zeros([batch_size, 1, ny])
-    # input_y = torch.cat((zeros, input_y), dim=1)
-    # input_seq = torch.cat((input_seq, input_y), dim=2)
+    input_y = batch_y[:, 1:seq_length, :]
+    zeros = torch.zeros([batch_size, 1, ny])
+    input_y = torch.cat((zeros, input_y), dim=1)
+    input_seq = torch.cat((input_seq, input_y), dim=2)
 
     target_seq = batch_y[:, :, 0]
 
@@ -122,28 +127,38 @@ model.eval()
 for itr, (batch_y, batch_u) in enumerate(test_dl):
 
     input_seq = batch_u
-    # zeros = torch.zeros([1, seq_length, ny])
-    # input_seq = torch.cat((input_seq, zeros), dim=2)
+    zeros = torch.zeros([1, seq_length, ny])
+    input_seq = torch.cat((input_seq, zeros), dim=2)
 
     target_seq = batch_y[:, :, 0]
 
     output, hidden = model(input_seq)
 
-    # results = []
-    # for i in range(seq_length-1):
-    #     seq = input_seq[:, 0:i+1, :]
-    #     output, hidden = model(seq)
-    #     results.append(output[-1][0].detach().numpy())
-    #     input_seq[:, i+1, :] = output[-1][0]
+    results = []
+    for i in range(seq_length):
+        seq = input_seq[:, 0:i+1, :]
+        output, hidden = model(seq)
+        results.append(output[-1][0].detach().numpy())
+        if i == seq_length-1:
+            break
+        input_seq[:, i+1, :] = output[-1][0]
 
-    fig, ax = plt.subplots(3, 1, sharex=True)
-    ax[0].set_title("Input 1kk")
+    tgt = target_seq.view(-1).float()
+    loss = criterion(output[:, 0], tgt)
+    out = output[:, 0].detach().numpy()
+
+    print(tgt)
+    print(out)
+    print(loss)
+
+    fig, ax = plt.subplots(2, 1, sharex=True)
+    ax[0].set_title("Input 1")
     ax[0].plot(batch_u[0][:, 0])
-    ax[1].set_title("Input 2")
-    ax[1].plot(batch_u[0][:, 1])
-    ax[2].set_title("Output")
-    ax[2].plot(batch_y[0])
-    ax[2].plot(output[:, 0].detach().numpy(), c='red')
+    # ax[1].set_title("Input 2")
+    # ax[1].plot(batch_u[0][:, 1])
+    ax[1].set_title("Output")
+    ax[1].plot(tgt)
+    ax[1].plot(out, c='red')
 
     plt.show()
 
