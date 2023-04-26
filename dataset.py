@@ -27,7 +27,7 @@ class LinearDynamicalDataset(IterableDataset):
             u = u.transpose()  # T, C
             y = y.y.transpose().astype(self.dtype)  # T, C
             if self.normalize:
-                y = (y - y.mean(axis=0))/(y.std(axis=0))
+                y = (y - y.mean(axis=0))/(y.std(axis=0) + 1e-6)
 
             yield torch.tensor(y), torch.tensor(u)
 

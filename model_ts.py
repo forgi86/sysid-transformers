@@ -146,7 +146,8 @@ class GPT(nn.Module):
             h=nn.ModuleList([Block(config) for _ in range(config.n_layer)]),
             ln_f=LayerNorm(config.n_embd, bias=config.bias),
         ))
-        self.lm_head = nn.Linear(config.n_embd, config.n_y, bias=False)
+        self.lm_head = nn.Linear(config.n_embd, config.n_y, bias=True) # False
+        #self.lm_head = nn.Linear(config.n_embd, config.n_y, bias=False) # False
 
         # init all weights
         self.apply(self._init_weights)
