@@ -25,9 +25,10 @@ if __name__ == '__main__':
 
     # Save/load settings
     model_dir = "out"
-    out_file = "ckpt.pt"
-    init_from = "scratch"
-    in_file = "ckpt.pt"
+    out_file = "ckpt_.pt"
+    #init_from = "scratch"
+    init_from = "resume"
+    in_file = "ckpt_.pt"
 
     # System settings
     nx = 10
@@ -60,12 +61,12 @@ if __name__ == '__main__':
     eval_batch_size = 32
 
     # Compute settings
-    cuda_device = "cuda:0"
+    cuda_device = "cuda:1"
     no_cuda = False
     threads = 5
-    compile = True
+    compile = False
 
-    # %% Set seed for reproducibility
+    # Set seed for reproducibility
     torch.manual_seed(42)
     np.random.seed(43)
 
@@ -96,15 +97,21 @@ if __name__ == '__main__':
     if init_from == "scratch":
         print("Initializing a new model from scratch")
         gptconf = GPTConfig(**model_args)
-        model = GPT(gptconf).to(device)
-        iter_num = 0
+        model = GPT(gptconf)
     elif init_from == "resume":
         ckpt_path = model_dir / in_file
-        checkpoint = torch.load(ckpt_path)
-        gptconf = checkpoint["model_args"]
-        iter_num = checkpoint["iter_num"]
-        best_val_loss = checkpoint['best_val_loss']
-
+        checkpoint = torch.load(ckpt_path, map_location=device)
+        gptconf = GPTConfig(**checkpoint["model_args"])
+        model = GPT(gptconf)
+        state_dict = checkpoint['model']
+        # fix the keys of the state dictionary :(
+        # honestly no idea how checkpoints sometimes get this prefix, have to debug more
+        unwanted_prefix = '_orig_mod.'
+        for k,v in list(state_dict.items()):
+            if k.startswith(unwanted_prefix):
+                state_dict[k[len(unwanted_prefix):]] = state_dict.pop(k)
+        model.load_state_dict(state_dict)
+    model.to(device)
     if compile:
         model = torch.compile(model)  # requires PyTorch 2.0
 
@@ -131,6 +138,9 @@ if __name__ == '__main__':
         model.eval()
         loss = 0.0
         for eval_iter, (batch_y, batch_u) in enumerate(val_dl):
+            if device_type == "cuda":
+                batch_y = batch_y.pin_memory().to(device, non_blocking=True)
+                batch_u = batch_u.pin_memory().to(device, non_blocking=True)
             _, loss_iter = model(batch_u, batch_y)
             loss += loss_iter.item()
             if eval_iter == eval_iters:
@@ -142,15 +152,22 @@ if __name__ == '__main__':
     # Training loop
     LOSS_ITR = []
     LOSS_EVAL = []
-    best_val_loss = np.inf
     loss_val = np.nan
+
+    if init_from == "scratch":
+        iter_num = 0
+        best_val_loss = np.inf
+    elif init_from == "resume":
+        iter_num = checkpoint["iter_num"]
+        best_val_loss = checkpoint['best_val_loss']
+
     time_start = time.time()
     for iter_num, (batch_y, batch_u) in tqdm.tqdm(enumerate(train_dl, start=iter_num)):
 
         if (iter_num % eval_interval == 0) and iter_num > 0:
             loss_val = estimate_loss()
             LOSS_EVAL.append(loss_val)
-            print(f"{iter_num=} {loss_val=:.4f}\n")
+            print(f"\n{iter_num=} {loss_val=:.4f}\n")
             if loss_val < best_val_loss:
                 best_val_loss = loss_val
                 checkpoint = {

@@ -96,7 +96,7 @@ class WHDataset(IterableDataset):
 
 
 class WHSmoothDataset(IterableDataset):
-    def __init__(self, nx=5, seq_len=500, strictly_proper=True, dtype="float32", normalize=True):
+    def __init__(self, nx=5, nu=1, ny=1, seq_len=500, strictly_proper=True, dtype="float32", normalize=True):
         super(WHSmoothDataset).__init__()
         self.nx = nx
         self.seq_len = seq_len
