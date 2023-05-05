@@ -1,4 +1,3 @@
-
 import torch
 from torch import nn
 from dataset import LinearDynamicalDataset
@@ -6,12 +5,13 @@ from torch.utils.data import DataLoader
 import matplotlib.pyplot as plt
 import numpy as np
 
+
 # torch.cuda.is_available() checks and returns a Boolean True if a GPU is available, else it'll return False
 is_cuda = torch.cuda.is_available()
 
 # If we have a GPU available, we'll set our device to GPU. We'll use this device variable later in our code.
 if is_cuda:
-    # device = torch.device("cuda")
+    #device = torch.device("cuda")
     device = torch.device(f'cuda:{2}')
     print("GPU is available")
 else:
@@ -34,6 +34,8 @@ class Model(nn.Module):
         self.dropout = nn.Dropout(0.2)
         # Fully connected layer
         self.fc = nn.Linear(hidden_dim, output_size)
+
+
 
     def forward(self, x):
         batch_size = x.size(0)
@@ -60,72 +62,68 @@ class Model(nn.Module):
         return hidden
 
 
+# arguments
 nx = 5
 nu = 1
 ny = 1
 seq_length = 300
+max_iters = 50000
+batch_size = 64
 
-criterion = nn.MSELoss()
+train_ds = LinearDynamicalDataset(nx=nx, nu=nu, ny=ny, seq_len=seq_length, normalize=True)
+train_dl = DataLoader(train_ds, batch_size=batch_size, num_workers=4)
 
+# Instantiate the model with hyperparameters
 model = Model(input_size=nu + ny, output_size=ny, hidden_dim=256, n_layers=4)
-model.load_state_dict(torch.load('trained_models/rnn_model20000', map_location=torch.device('cpu')))
-model.eval()
+# We'll also set the model to the device that we defined earlier (default is CPU)
+model.to(device)
 
-test_ds = LinearDynamicalDataset(nx=nx, nu=nu, ny=ny, seq_len=seq_length, normalize=True)
-test_dl = DataLoader(test_ds, batch_size=1, num_workers=0)
+# Define hyperparameters
+n_epochs = 1
+lr = 0.0001
 
-model.eval()
-with torch.no_grad():
-    for itr, (batch_y, batch_u) in enumerate(test_dl):
+# Define Loss, Optimizer
+criterion = nn.MSELoss()
+optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 
-        input_seq = batch_u
+model.train()
+for itr, (batch_y, batch_u) in enumerate(train_dl):
 
-        init_sequence = 50
-        start_zero = torch.zeros([1, 1, ny])
-        input_y = batch_y[:, 0:init_sequence - 1, :]
-        input_y = torch.cat((start_zero, input_y), dim=1)
-        zeros = torch.zeros([1, seq_length - init_sequence, ny])
-        input_y = torch.cat((input_y, zeros), dim=1)
+    if itr % 10000 == 0:
+        torch.save(model.state_dict(), 'trained_models/rnn_model'+str(itr))
+    if itr >= max_iters:
+        break
 
-        # zeros = torch.zeros([1, seq_length, ny])
-        input_seq = torch.cat((input_seq, input_y), dim=2)
+    # fig, ax = plt.subplots(3, 1, sharex=True)
+    # ax[0].set_title("Input 1")
+    # ax[0].plot(batch_u[0][:, 0])
+    # ax[1].set_title("Input 2")
+    # ax[1].plot(batch_u[0][:, 1])
+    # ax[2].set_title("Output")
+    # ax[2].plot(batch_y[0])
+    #
+    # plt.show()
 
-        target_seq = batch_y[:, :, 0]
+    input_seq = batch_u
+    input_y = batch_y[:, 0:seq_length-1, :]
+    zeros = torch.zeros([batch_size, 1, ny])
+    input_y = torch.cat((zeros, input_y), dim=1)
+    input_seq = torch.cat((input_seq, input_y), dim=2).to(device)
+
+    target_seq = batch_y[:, :, 0].to(device)
+
+    # Training Run
+    for epoch in range(1, n_epochs + 1):
+        optimizer.zero_grad()  # Clears existing gradients from previous epoch
+        #input_seq.to(device)
+        output, hidden = model(input_seq)
         tgt = target_seq.view(-1).float()
-
-        #output, hidden = model(input_seq)
-
-        results = []
-        total_loss = 0
-        for i in range(init_sequence, seq_length+1):
-            seq = input_seq[:, 0:i, :]
-            output, hidden = model(seq)
-            results.append(output[-1][0].detach().numpy())
-            if i == seq_length:
-                break
-            loss = criterion(output[-1][0], tgt[i])
-            total_loss += loss
-            input_seq[:, i, :] = tgt[i]
-            # input_seq[:, i, :] = output[-1][0]
-
         loss = criterion(output[:, 0], tgt)
-        out = output[:, 0].detach().numpy()
+        loss.backward()  # Does backpropagation and calculates gradients
+        optimizer.step()  # Updates the weights accordingly
 
-        # print(tgt)
-        # print(out)
+        #if epoch % 10 == 0:
+        print('Itr: {}, Epoch: {}/{}.............'.format(itr, epoch, n_epochs), end=' ')
+        print("Loss: {:.4f}".format(loss.item()))
 
-        # loss with initial sequence
-        print(loss)
-        # loss without initial sequence
-        print(total_loss / (seq_length-init_sequence))
-
-        fig, ax = plt.subplots(2, 1, sharex=True)
-        ax[0].set_title("Input 1")
-        ax[0].plot(batch_u[0][:, 0])
-        # ax[1].set_title("Input 2")
-        # ax[1].plot(batch_u[0][:, 1])
-        ax[1].set_title("Output")
-        ax[1].plot(tgt)
-        ax[1].plot(out, c='red')
-
-        plt.show()
+torch.save(model.state_dict(), 'trained_models/rnn_model')
