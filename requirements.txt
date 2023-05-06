@@ -2,3 +2,7 @@ numpy
 torch
 control
 slycot
+
+matplotlib
+tqdm
+numba

@@ -1,5 +1,5 @@
 import math
-from numpy import zeros, empty, cos, sin, any
+from numpy import zeros, empty, cos, sin, any, copy
 from numpy.linalg import solve, LinAlgError
 from numpy.random import rand, randn, uniform
 from numba import float32, float64, jit, NumbaPerformanceWarning
@@ -238,21 +238,27 @@ def drss_matrices(
 
 
 signatures = [
-    float32[:, :](float32[:, :], float32[:, :], float32[:, :], float32[:, :], float32[:, :]),
-    float64[:, :](float64[:, :], float64[:, :], float64[:, :], float64[:, :], float64[:, :])
+    float32[:, :](float32[:, :], float32[:, :], float32[:, :], float32[:, :], float32[:, :], float32[:]),
+    float64[:, :](float64[:, :], float64[:, :], float64[:, :], float64[:, :], float64[:, :], float64[:])
 ]
-#@jit(float32[:, :](float32[:, :], float32[:, :], float32[:, :], float32[:, :], float32[:, :]), nopython=True,
-#     cache=True)
+
+
 @jit(signatures, nopython=True, cache=True)
-def dlsim(A, B, C, D, u):
-    # A, B, C, D = sys_matrices
+def _dlsim(A, B, C, D, u, x0):
     seq_len = u.shape[0]
     nx, nu = B.shape
     ny, _ = C.shape
     y = empty(shape=(seq_len, ny), dtype=u.dtype)
-    x_step = zeros((nx,), dtype=u.dtype)
+    x_step = copy(x0) # x_step = zeros((nx,), dtype=u.dtype)
     for idx in range(seq_len):
         u_step = u[idx]
         y[idx] = C.dot(x_step) + D.dot(u_step)
         x_step = A.dot(x_step) + B.dot(u_step)
     return y
+
+
+def dlsim(A, B, C, D, u, x0=None):
+    if x0 is None:
+        nx = A.shape[0]
+        x0 = zeros((nx,), dtype=u.dtype)
+    return _dlsim(A, B, C, D, u, x0)

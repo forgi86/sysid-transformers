@@ -13,22 +13,15 @@ if __name__ == "__main__":
     import matplotlib.pyplot as plt
     import time
 
-    #warnings.simplefilter('ignore', category=NumbaPerformanceWarning)
-
     seq_len = 1000
     nu = 1
     dtype = "float64"
     time_start = time.time()
     for _ in range(1000):
-        #A, B, C, D = drss_matrices_old(20, 1, 1, dtype=dtype , positive_real=False)
         A, B, C, D = drss_matrices(20, 1, 1, dtype=dtype)#, positive_real=True)
-        #G1 = control.ss(A, B, C, D, dt=1.0)
+
         u = np.random.randn(seq_len, nu).astype(dtype)
-        #t, y, x = scipy.signal.dlsim((A, B, C, D, 1.0), u)
         y = dlsim(A, B, C, D, u)
-        #y = control.forced_response(G1, T=None, U=u.transpose(), X0=0.0)
-        #y = y.y.astype("float32").transpose()  # T, C
-        #y = (y - y.mean(axis=0)) / (y.std(axis=0) + 1e-6)
 
     G1 = control.ss(A, B, C, D, dt=1.0)
     y_ct = control.forced_response(G1, T=None, U=u.transpose(), X0=0.0)
