@@ -1,3 +1,4 @@
+import math
 import torch
 import numpy as np
 from torch.utils.data import DataLoader, IterableDataset
@@ -126,15 +127,19 @@ class WHSmoothDataset(IterableDataset):
             w2 = np.random.randn(n_out, n_hidden) / np.sqrt(n_hidden)
             b2 = np.random.randn(1, n_out) * 1.0
 
-            G1 = drss_matrices(states=self.nx,
+            G1 = drss_matrices(states=np.random.randint(1, self.nx),
                                inputs=1,
                                outputs=1,
-                               strictly_proper=self.strictly_proper)
+                               strictly_proper=self.strictly_proper,
+                               mag_range=(0.5, 0.98),
+                               phase_range=(0, math.pi / 2))
 
-            G2 = drss_matrices(states=self.nx,
+            G2 = drss_matrices(states=np.random.randint(1, self.nx),
                                inputs=1,
                                outputs=1,
-                               strictly_proper=False)
+                               strictly_proper=False,
+                               mag_range=(0.5, 0.98),
+                               phase_range=(0, math.pi / 2))
 
             u = np.random.randn(self.seq_len, 1)  # C, T as python-control wants
 

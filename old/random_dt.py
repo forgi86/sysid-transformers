@@ -6,7 +6,6 @@ from numpy.linalg.linalg import LinAlgError
 from lti import drss_matrices_old, drss_matrices
 
 
-
 if __name__ == "__main__":
     import matplotlib
     matplotlib.use("TKAgg")
@@ -14,7 +13,7 @@ if __name__ == "__main__":
     import control
     import matplotlib.pyplot as plt
     #A, B, C, D = random_ss(5, 1, 1, positive_real=True)
-    A, B, C, D = drss_matrices(100, 1, 1)
+    A, B, C, D = drss_matrices(10, 1, 1, mag_range=(0.6, 0.98), phase_range=(0, math.pi / 2))
     E, V = np.linalg.eig(A)
 
     theta = np.linspace(0, 2*math.pi, 1000)
