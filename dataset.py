@@ -97,14 +97,18 @@ class WHDataset(IterableDataset):
 
 
 class WHSmoothDataset(IterableDataset):
-    def __init__(self, nx=5, nu=1, ny=1, seq_len=500, strictly_proper=True, dtype="float32", normalize=True):
+    def __init__(self, nx=5, nu=1, ny=1, seq_len=500, random_order=True,
+                  strictly_proper=True, normalize=True, dtype="float32"):
         super(WHSmoothDataset).__init__()
         self.nx = nx
+        self.nu = nu
+        self.ny = ny
         self.seq_len = seq_len
         self.strictly_proper = strictly_proper
         self.dtype = dtype
         self.normalize = normalize
         self.strictly_proper = strictly_proper
+        self.random_order = random_order
 
     def __iter__(self):
 
@@ -121,27 +125,28 @@ class WHSmoothDataset(IterableDataset):
             n_in = 1
             n_out = 1
             n_hidden = 32
+            n_skip = 100
 
             w1 = np.random.randn(n_hidden, n_in) / np.sqrt(n_in) * 5 / 3
             b1 = np.random.randn(1, n_hidden) * 1.0
             w2 = np.random.randn(n_out, n_hidden) / np.sqrt(n_hidden)
             b2 = np.random.randn(1, n_out) * 1.0
 
-            G1 = drss_matrices(states=np.random.randint(1, self.nx),
+            G1 = drss_matrices(states=np.random.randint(1, self.nx+1) if self.random_order else self.nx,
                                inputs=1,
                                outputs=1,
                                strictly_proper=self.strictly_proper,
-                               mag_range=(0.5, 0.98),
+                               mag_range=(0.3, 0.97),
                                phase_range=(0, math.pi / 2))
 
-            G2 = drss_matrices(states=np.random.randint(1, self.nx),
+            G2 = drss_matrices(states=np.random.randint(1, self.nx+1) if self.random_order else self.nx,
                                inputs=1,
                                outputs=1,
                                strictly_proper=False,
-                               mag_range=(0.5, 0.98),
+                               mag_range=(0.3, 0.97),
                                phase_range=(0, math.pi / 2))
 
-            u = np.random.randn(self.seq_len, 1)  # C, T as python-control wants
+            u = np.random.randn(self.seq_len, 1) 
 
             # G1
             y = dlsim(*G1, u)
