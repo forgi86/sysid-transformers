@@ -26,7 +26,7 @@ if __name__ == "__main__":
     G1 = control.ss(A, B, C, D, dt=1.0)
     y_ct = control.forced_response(G1, T=None, U=u.transpose(), X0=0.0)
     y_ct = y_ct.y.astype("float32").transpose()  # T, C
-    np.allclose(y, y_ct, rtol=1e-5, atol=1e-7)
+    assert(np.allclose(y, y_ct, rtol=1e-5, atol=1e-7))
 
     time_op = time.time() - time_start
     print(f"{time_op=:.2f}")
@@ -46,3 +46,6 @@ if __name__ == "__main__":
 
     plt.figure()
     control.bode_plot(sys)
+
+    plt.figure()
+    plt.plot(y)

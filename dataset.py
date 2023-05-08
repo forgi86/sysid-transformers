@@ -98,7 +98,7 @@ class WHDataset(IterableDataset):
 
 class WHSmoothDataset(IterableDataset):
     def __init__(self, nx=5, nu=1, ny=1, seq_len=500, random_order=True,
-                  strictly_proper=True, normalize=True, dtype="float32"):
+                 strictly_proper=True, normalize=True, dtype="float32", **mdlargs):
         super(WHSmoothDataset).__init__()
         self.nx = nx
         self.nu = nu
@@ -109,6 +109,7 @@ class WHSmoothDataset(IterableDataset):
         self.normalize = normalize
         self.strictly_proper = strictly_proper
         self.random_order = random_order
+        self.mdlargs = mdlargs
 
     def __iter__(self):
 
@@ -136,17 +137,15 @@ class WHSmoothDataset(IterableDataset):
                                inputs=1,
                                outputs=1,
                                strictly_proper=self.strictly_proper,
-                               mag_range=(0.2, 0.97),
-                               phase_range=(0, math.pi / 2))
+                               **self.mdlargs)
 
             G2 = drss_matrices(states=np.random.randint(1, self.nx+1) if self.random_order else self.nx,
                                inputs=1,
                                outputs=1,
                                strictly_proper=False,
-                               mag_range=(0.2, 0.97),
-                               phase_range=(0, math.pi / 2))
+                               **self.mdlargs)
 
-            u = np.random.randn(self.seq_len + n_skip, 1) 
+            u = np.random.randn(self.seq_len + n_skip, 1)  # input to be improved (filtered noise, multisine, etc)
 
             # G1
             y1 = dlsim(*G1, u)
@@ -171,7 +170,7 @@ class WHSmoothDataset(IterableDataset):
 
 
 if __name__ == "__main__":
-    train_ds = WHSmoothDataset(nx=5, seq_len=1000)
+    train_ds = WHSmoothDataset(nx=5, seq_len=1000, mag_range=(0.5, 0.96), phase_range=(0, math.pi / 3))
     # train_ds = LinearDynamicalDataset(nx=5, nu=2, ny=3, seq_len=1000)
     train_dl = DataLoader(train_ds, batch_size=32)
     batch_y, batch_u = next(iter(train_dl))
