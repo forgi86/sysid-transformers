@@ -125,7 +125,7 @@ class WHSmoothDataset(IterableDataset):
             n_in = 1
             n_out = 1
             n_hidden = 32
-            n_skip = 100
+            n_skip = 200
 
             w1 = np.random.randn(n_hidden, n_in) / np.sqrt(n_in) * 5 / 3
             b1 = np.random.randn(1, n_hidden) * 1.0
@@ -136,33 +136,37 @@ class WHSmoothDataset(IterableDataset):
                                inputs=1,
                                outputs=1,
                                strictly_proper=self.strictly_proper,
-                               mag_range=(0.3, 0.97),
+                               mag_range=(0.2, 0.97),
                                phase_range=(0, math.pi / 2))
 
             G2 = drss_matrices(states=np.random.randint(1, self.nx+1) if self.random_order else self.nx,
                                inputs=1,
                                outputs=1,
                                strictly_proper=False,
-                               mag_range=(0.3, 0.97),
+                               mag_range=(0.2, 0.97),
                                phase_range=(0, math.pi / 2))
 
-            u = np.random.randn(self.seq_len, 1) 
+            u = np.random.randn(self.seq_len + n_skip, 1) 
 
             # G1
-            y = dlsim(*G1, u)
-            y = (y - y.mean(axis=0)) / (y.std(axis=0) + 1e-6)
+            y1 = dlsim(*G1, u)
+            y1 = (y1 - y1[n_skip:].mean(axis=0)) / (y1[n_skip:].std(axis=0) + 1e-6)
 
             # F
-            y = nn_fun(y)
+            y2 = nn_fun(y1)
 
             # G2
-            y = dlsim(*G2, y)
+            y3 = dlsim(*G2, y2)
+
+            u = u[n_skip:]
+            y = y3[n_skip:]
 
             if self.normalize:
                 y = (y - y.mean(axis=0)) / (y.std(axis=0) + 1e-6)
 
             u = u.astype(self.dtype)
             y = y.astype(self.dtype)
+
             yield torch.tensor(y), torch.tensor(u)
 
 

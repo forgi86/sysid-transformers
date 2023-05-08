@@ -126,7 +126,7 @@ def drss_matrices_old(
 
 
 def drss_matrices(
-        states, inputs, outputs, strictly_proper=False, mag_range=(0.2, 0.98), phase_range=(0, math.pi / 2),
+        states, inputs, outputs, strictly_proper=False, mag_range=(0.2, 0.97), phase_range=(0, math.pi / 2),
         dtype="float64"):
     """Generate a random state space.
 
