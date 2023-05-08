@@ -12,22 +12,23 @@ import argparse
 
 if __name__ == '__main__':
 
-    # parser = argparse.ArgumentParser(description='State-space neural network tests')
-    # parser.add_argument('--model-dir', type=str, default="out", metavar='S',
-    #                     help='Saved model folder')
-    # parser.add_argument('--out-file', type=str, default="ckpt", metavar='S',
-    #                     help='Saved model name')
-    # parser.add_argument('--in-file', type=str, default="ckpt", metavar='S',
-    #                     help='Loaded model name (when resuming)')
-    # parser.add_argument('--init-from', type=str, default="scratch", metavar='S',
-    #                     help='Init either from scratch or from previous checkpoint')
-    # args = parser.parse_args()
+    parser = argparse.ArgumentParser(description='State-space neural network tests')
+    parser.add_argument('--model-dir', type=str, default="out", metavar='S',
+                        help='Saved model folder')
+    parser.add_argument('--out-file', type=str, default="ckpt", metavar='S',
+                        help='Saved model name')
+    parser.add_argument('--in-file', type=str, default="ckpt", metavar='S',
+                        help='Loaded model name (when resuming)')
+    parser.add_argument('--init-from', type=str, default="scratch", metavar='S',
+                        help='Init either from scratch or from previous checkpoint')
+    args = parser.parse_args()
 
     # Save/load settings
     model_dir = "out"
-    out_file = "ckpt_wh"
-    init_from = "scratch"
+    out_file = "ckpt_wh_finetuned"
+    #init_from = "scratch"
     #init_from = "resume"
+    init_from = "pretrained"
     in_file = "ckpt_wh"
 
     # System settings
@@ -50,11 +51,11 @@ if __name__ == '__main__':
     weight_decay = 0.0#1e-1
     beta1 = 0.9
     beta2 = 0.95
-    warmup_iters = 10_000
+    warmup_iters = 0 #10_000
     max_iters = 1_000_000  # 600_000
     lr_decay_iters = max_iters
     min_lr = learning_rate/10.0
-    batch_size = 32
+    batch_size = 64
 
     eval_interval = 2000
     eval_iters = 100
@@ -67,8 +68,8 @@ if __name__ == '__main__':
     compile = False
 
     # Set seed for reproducibility
-    torch.manual_seed(42)
-    np.random.seed(43)
+    torch.manual_seed(44)
+    np.random.seed(45)
 
     # Create out dir
     model_dir = Path(model_dir)
@@ -98,7 +99,7 @@ if __name__ == '__main__':
     if init_from == "scratch":
         gptconf = GPTConfig(**model_args)
         model = GPT(gptconf)
-    elif init_from == "resume":
+    elif init_from == "resume" or init_from == "pretrained":
         ckpt_path = model_dir / f"{in_file}.pt"
         checkpoint = torch.load(ckpt_path, map_location=device)
         gptconf = GPTConfig(**checkpoint["model_args"])
@@ -154,7 +155,7 @@ if __name__ == '__main__':
     LOSS_VAL = []
     loss_val = np.nan
 
-    if init_from == "scratch":
+    if init_from == "scratch" or init_from == "pretrained":
         iter_num = 0
         best_val_loss = np.inf
     elif init_from == "resume":
