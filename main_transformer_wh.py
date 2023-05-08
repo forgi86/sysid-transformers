@@ -3,9 +3,10 @@ import time
 import torch
 import numpy as np
 import math
-from dataset import WHSmoothDataset
+from functools import partial
+from dataset import WHDataset
 from torch.utils.data import DataLoader
-from model_ts import GPTConfig, GPT
+from model import GPTConfig, GPT, warmup_cosine_lr
 import tqdm
 import argparse
 
@@ -13,6 +14,8 @@ import argparse
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='State-space neural network tests')
+
+    # Overall
     parser.add_argument('--model-dir', type=str, default="out", metavar='S',
                         help='Saved model folder')
     parser.add_argument('--out-file', type=str, default="ckpt", metavar='S',
@@ -20,87 +23,109 @@ if __name__ == '__main__':
     parser.add_argument('--in-file', type=str, default="ckpt", metavar='S',
                         help='Loaded model name (when resuming)')
     parser.add_argument('--init-from', type=str, default="scratch", metavar='S',
-                        help='Init either from scratch or from previous checkpoint')
-    args = parser.parse_args()
+                        help='Init from (scratch|resume|pretrained)')
 
-    # Save/load settings
-    model_dir = "out"
-    out_file = "ckpt_wh_finetuned"
-    #init_from = "scratch"
-    #init_from = "resume"
-    init_from = "pretrained"
-    in_file = "ckpt_wh"
+    # Dataset
+    parser.add_argument('--nx', type=int, default=5, metavar='N',
+                        help='model order (default: 5)')
+    parser.add_argument('--nu', type=int, default=1, metavar='N',
+                        help='model order (default: 5)')
+    parser.add_argument('--ny', type=int, default=1, metavar='N',
+                        help='model order (default: 5)')
+    parser.add_argument('--seq-len', type=int, default=600, metavar='N',
+                        help='sequence length (default: 600)')
+    parser.add_argument('--mag_range', type=tuple, default=(0.4, 0.97), metavar='N',
+                        help='sequence length (default: 600)')
+    parser.add_argument('--phase_range', type=tuple, default=(0.0, math.pi/2), metavar='N',
+                        help='sequence length (default: 600)')
 
-    # System settings
-    nx = 10
-    nu = 1
-    ny = 1
-    seq_len = 600
+    # Model
+    parser.add_argument('--n-layer', type=int, default=12, metavar='N',
+                        help='number of iterations (default: 1M)')
+    parser.add_argument('--n-head', type=int, default=4, metavar='N',
+                        help='number of iterations (default: 1M)')
+    parser.add_argument('--n-embd', type=int, default=128, metavar='N',
+                        help='number of iterations (default: 1M)')
+    parser.add_argument('--dropout', type=float, default=0.0, metavar='LR',
+                        help='learning rate (default: 1e-4)')
+    parser.add_argument('--bias', action='store_true', default=False,
+                        help='bias in model')
 
-    # Transformer settings
-    block_size = seq_len
-    n_layer = 12
-    n_head = 4
-    n_embd = 128
-    dropout = 0.0
-    bias = False
+    # Training
+    parser.add_argument('--batch-size', type=int, default=32, metavar='N',
+                        help='batch size (default:32)')
+    parser.add_argument('--max-iters', type=int, default=1_000_000, metavar='N',
+                        help='number of iterations (default: 1M)')
+    parser.add_argument('--warmup-iters', type=int, default=10_000, metavar='N',
+                        help='number of iterations (default: 1000)')
+    parser.add_argument('--lr', type=float, default=6e-4, metavar='LR',
+                        help='learning rate (default: 1e-4)')
+    parser.add_argument('--weight-decay', type=float, default=0.0, metavar='D',
+                        help='weight decay (default: 1e-4)')
+    parser.add_argument('--eval-interval', type=int, default=2000, metavar='N',
+                        help='batch size (default:32)')
+    parser.add_argument('--eval-iters', type=int, default=100, metavar='N',
+                        help='batch size (default:32)')
+    parser.add_argument('--fixed-lr', action='store_true', default=False,
+                        help='disables CUDA training')
 
-    # Optimization settings
-    learning_rate = 1e-3 #6e-4
-    decay_lr = True
-    weight_decay = 0.0#1e-1
-    beta1 = 0.9
-    beta2 = 0.95
-    warmup_iters = 0 #10_000
-    max_iters = 1_000_000  # 600_000
-    lr_decay_iters = max_iters
-    min_lr = learning_rate/10.0
-    batch_size = 64
+    # Compute
+    parser.add_argument('--threads', type=int, default=10,
+                        help='number of CPU threads (default: 10)')
+    parser.add_argument('--no-cuda', action='store_true', default=False,
+                        help='disables CUDA training')
+    parser.add_argument('--cuda-device', type=str, default="cuda:0", metavar='S',
+                        help='cuda device (default: "cuda:0")')
+    parser.add_argument('--compile', action='store_true', default=False,
+                        help='disables CUDA training')
 
-    eval_interval = 2000
-    eval_iters = 100
-    eval_batch_size = 32
+    cfg = parser.parse_args()
 
-    # Compute settings
-    cuda_device = "cuda:0"
-    no_cuda = False
-    threads = 10
-    compile = False
+    # Other settings
+    cfg.beta1 = 0.9
+    cfg.beta2 = 0.95
+
+    # Derived settings
+    cfg.block_size = cfg.seq_len
+    cfg.lr_decay_iters = cfg.max_iters
+    cfg.min_lr = cfg.lr/10.0  #
+    cfg.decay_lr = not cfg.fixed_lr
+
+    cfg.eval_batch_size = cfg.batch_size
 
     # Set seed for reproducibility
     torch.manual_seed(44)
     np.random.seed(45)
 
     # Create out dir
-    model_dir = Path(model_dir)
+    model_dir = Path(cfg.model_dir)
     model_dir.mkdir(exist_ok=True)
 
     # Configure compute
-    torch.set_num_threads(threads)
-    use_cuda = not no_cuda and torch.cuda.is_available()
-    device_name = cuda_device if use_cuda else "cpu"
+    torch.set_num_threads(cfg.threads)
+    use_cuda = not cfg.no_cuda and torch.cuda.is_available()
+    device_name = cfg.cuda_device if use_cuda else "cpu"
     device = torch.device(device_name)
-    device_type = 'cuda' if 'cuda' in device_name else 'cpu' # for later use in torch.autocast
+    device_type = 'cuda' if 'cuda' in device_name else 'cpu'
     torch.set_float32_matmul_precision("high")
-    #torch._dynamo.config.suppress_errors = True
-    #torch.backends.cuda.matmul.allow_tf32 = True # allow tf32 on matmul
-    #torch.backends.cudnn.allow_tf32 = True # allow tf32 on cudnn
 
     # Create data loader
-    train_ds = WHSmoothDataset(nx=nx, nu=nu, ny=ny, seq_len=seq_len)
-    train_dl = DataLoader(train_ds, batch_size=batch_size, num_workers=threads)
+    train_ds = WHDataset(nx=cfg.nx, nu=cfg.nu, ny=cfg.ny, seq_len=cfg.seq_len, mag_range=cfg.mag_range,
+                         phase_range=cfg.phase_range)
+    train_dl = DataLoader(train_ds, batch_size=cfg.batch_size, num_workers=cfg.threads)
 
-    val_ds = WHSmoothDataset(nx=nx, nu=nu, ny=ny, seq_len=seq_len)
-    val_dl = DataLoader(val_ds, batch_size=eval_batch_size, num_workers=threads)
+    val_ds = WHDataset(nx=cfg.nx, nu=cfg.nu, ny=cfg.ny, seq_len=cfg.seq_len, mag_range=cfg.mag_range,
+                       phase_range=cfg.phase_range)
+    val_dl = DataLoader(val_ds, batch_size=cfg.eval_batch_size, num_workers=cfg.threads)
 
-    model_args = dict(n_layer=n_layer, n_head=n_head, n_embd=n_embd, n_y=1, n_u=1, block_size=block_size,
-                      bias=bias, dropout=dropout)  # start with model_args from command line
+    model_args = dict(n_layer=cfg.n_layer, n_head=cfg.n_head, n_embd=cfg.n_embd, n_y=1, n_u=1, block_size=cfg.block_size,
+                      bias=cfg.bias, dropout=cfg.dropout)  # start with model_args from command line
 
-    if init_from == "scratch":
+    if cfg.init_from == "scratch":
         gptconf = GPTConfig(**model_args)
         model = GPT(gptconf)
-    elif init_from == "resume" or init_from == "pretrained":
-        ckpt_path = model_dir / f"{in_file}.pt"
+    elif cfg.init_from == "resume" or cfg.init_from == "pretrained":
+        ckpt_path = model_dir / f"{cfg.in_file}.pt"
         checkpoint = torch.load(ckpt_path, map_location=device)
         gptconf = GPTConfig(**checkpoint["model_args"])
         model = GPT(gptconf)
@@ -113,26 +138,13 @@ if __name__ == '__main__':
                 state_dict[k[len(unwanted_prefix):]] = state_dict.pop(k)
         model.load_state_dict(state_dict)
     model.to(device)
-    if compile:
+
+    if cfg.compile:
         model = torch.compile(model)  # requires PyTorch 2.0
 
-    #optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate)
-    optimizer = model.configure_optimizers(weight_decay, learning_rate, (beta1, beta2), device_type)
-    if init_from == "resume":
+    optimizer = model.configure_optimizers(cfg.weight_decay, cfg.lr, (cfg.beta1, cfg.beta2), device_type)
+    if cfg.init_from == "resume":
         optimizer.load_state_dict(checkpoint['optimizer'])
-
-    def get_lr(iter):
-        # 1) linear warmup for warmup_iters steps
-        if iter < warmup_iters:
-            return learning_rate * iter / warmup_iters
-        # 2) if it > lr_decay_iters, return min learning rate
-        if iter > lr_decay_iters:
-            return min_lr
-        # 3) in between, use cosine decay down to min learning rate
-        decay_ratio = (iter - warmup_iters) / (lr_decay_iters - warmup_iters)
-        assert 0 <= decay_ratio <= 1
-        coeff = 0.5 * (1.0 + math.cos(math.pi * decay_ratio)) # coeff ranges 0..1
-        return min_lr + coeff * (learning_rate - min_lr)
 
     @torch.no_grad()
     def estimate_loss():
@@ -144,9 +156,9 @@ if __name__ == '__main__':
                 batch_u = batch_u.pin_memory().to(device, non_blocking=True)
             _, loss_iter = model(batch_u, batch_y)
             loss += loss_iter.item()
-            if eval_iter == eval_iters:
+            if eval_iter == cfg.eval_iters:
                 break
-        loss /= eval_iters
+        loss /= cfg.eval_iters
         model.train()
         return loss
 
@@ -155,17 +167,19 @@ if __name__ == '__main__':
     LOSS_VAL = []
     loss_val = np.nan
 
-    if init_from == "scratch" or init_from == "pretrained":
+    if cfg.init_from == "scratch" or cfg.init_from == "pretrained":
         iter_num = 0
         best_val_loss = np.inf
-    elif init_from == "resume":
+    elif cfg.init_from == "resume":
         iter_num = checkpoint["iter_num"]
         best_val_loss = checkpoint['best_val_loss']
 
+    get_lr = partial(warmup_cosine_lr, lr=cfg.lr, min_lr=cfg.min_lr,
+                     warmup_iters=cfg.warmup_iters, lr_decay_iters=cfg.lr_decay_iters)
     time_start = time.time()
     for iter_num, (batch_y, batch_u) in tqdm.tqdm(enumerate(train_dl, start=iter_num)):
 
-        if (iter_num % eval_interval == 0) and iter_num > 0:
+        if (iter_num % cfg.eval_interval == 0) and iter_num > 0:
             loss_val = estimate_loss()
             LOSS_VAL.append(loss_val)
             print(f"\n{iter_num=} {loss_val=:.4f}\n")
@@ -180,12 +194,17 @@ if __name__ == '__main__':
                     'LOSS': LOSS_ITR,
                     'LOSS_VAL': LOSS_VAL,
                     'best_val_loss': best_val_loss,
+                    'cfg': cfg,
                 }
-                torch.save(checkpoint, model_dir / f"{out_file}.pt")
+                torch.save(checkpoint, model_dir / f"{cfg.out_file}.pt")
         # determine and set the learning rate for this iteration
-        lr = get_lr(iter_num) if decay_lr else learning_rate
+        if cfg.decay_lr:
+            lr_iter = get_lr(iter_num)
+        else:
+            lr_iter = cfg.lr
+
         for param_group in optimizer.param_groups:
-            param_group['lr'] = lr
+            param_group['lr'] = lr_iter
 
         if device_type == "cuda":
             batch_y = batch_y.pin_memory().to(device, non_blocking=True)
@@ -193,13 +212,13 @@ if __name__ == '__main__':
         batch_y_pred, loss = model(batch_u, batch_y)
         LOSS_ITR.append(loss.item())
         if iter_num % 100 == 0:
-            print(f"\n{iter_num=} {loss=:.4f} {loss_val=:.4f}\n")
+            print(f"\n{iter_num=} {loss=:.4f} {loss_val=:.4f} {lr_iter=}\n")
 
         loss.backward()
         optimizer.step()
         optimizer.zero_grad()
 
-        if iter_num == max_iters-1:
+        if iter_num == cfg.max_iters-1:
             break
 
     time_loop = time.time() - time_start
@@ -214,8 +233,9 @@ if __name__ == '__main__':
         'LOSS': LOSS_ITR,
         'LOSS_VAL': LOSS_VAL,
         'best_val_loss': best_val_loss,
+        'cfg': cfg,
     }
-    torch.save(checkpoint, model_dir / f"{out_file}_last.pt")
+    torch.save(checkpoint, cfg.model_dir / f"{cfg.out_file}_last.pt")
     
 
 

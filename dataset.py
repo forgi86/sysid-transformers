@@ -34,9 +34,9 @@ class LinearDynamicalDataset(IterableDataset):
             yield torch.tensor(y), torch.tensor(u)
 
 
-class WHDataset(IterableDataset):
+class WHDatasetOld(IterableDataset):
     def __init__(self, nx=5, nu=1, ny=1, seq_len=500, strictly_proper=True, dtype="float32", normalize=True):
-        super(WHDataset).__init__()
+        super(WHDatasetOld).__init__()
         self.nx = nx
         self.nu = nu
         self.ny = ny
@@ -96,10 +96,10 @@ class WHDataset(IterableDataset):
             yield torch.tensor(y), torch.tensor(u)
 
 
-class WHSmoothDataset(IterableDataset):
-    def __init__(self, nx=5, nu=1, ny=1, seq_len=500, random_order=True,
+class WHDataset(IterableDataset):
+    def __init__(self, nx=5, nu=1, ny=1, seq_len=600, random_order=True,
                  strictly_proper=True, normalize=True, dtype="float32", **mdlargs):
-        super(WHSmoothDataset).__init__()
+        super(WHDataset).__init__()
         self.nx = nx
         self.nu = nu
         self.ny = ny
@@ -170,7 +170,7 @@ class WHSmoothDataset(IterableDataset):
 
 
 if __name__ == "__main__":
-    train_ds = WHSmoothDataset(nx=5, seq_len=1000, mag_range=(0.5, 0.96), phase_range=(0, math.pi / 3))
+    train_ds = WHDataset(nx=5, seq_len=1000, mag_range=(0.5, 0.96), phase_range=(0, math.pi / 3))
     # train_ds = LinearDynamicalDataset(nx=5, nu=2, ny=3, seq_len=1000)
     train_dl = DataLoader(train_ds, batch_size=32)
     batch_y, batch_u = next(iter(train_dl))
