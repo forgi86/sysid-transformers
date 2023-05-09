@@ -34,7 +34,7 @@ if __name__ == '__main__':
                         help='model order (default: 5)')
     parser.add_argument('--seq-len', type=int, default=600, metavar='N',
                         help='sequence length (default: 600)')
-    parser.add_argument('--mag_range', type=tuple, default=(0.4, 0.97), metavar='N',
+    parser.add_argument('--mag_range', type=tuple, default=(0.5, 0.97), metavar='N',
                         help='sequence length (default: 600)')
     parser.add_argument('--phase_range', type=tuple, default=(0.0, math.pi/2), metavar='N',
                         help='sequence length (default: 600)')
