@@ -9,11 +9,12 @@ from torch.utils.data import DataLoader
 from model import GPTConfig, GPT, warmup_cosine_lr
 import tqdm
 import argparse
+import wandb
 
 
 if __name__ == '__main__':
 
-    parser = argparse.ArgumentParser(description='State-space neural network tests')
+    parser = argparse.ArgumentParser(description='Meta system identification with transformers')
 
     # Overall
     parser.add_argument('--model-dir', type=str, default="out", metavar='S',
@@ -24,6 +25,8 @@ if __name__ == '__main__':
                         help='Loaded model name (when resuming)')
     parser.add_argument('--init-from', type=str, default="scratch", metavar='S',
                         help='Init from (scratch|resume|pretrained)')
+    parser.add_argument('--seed', type=int, default=42, metavar='N',
+                        help='Seed for random number generation')
 
     # Dataset
     parser.add_argument('--nx', type=int, default=5, metavar='N',
@@ -82,6 +85,7 @@ if __name__ == '__main__':
     cfg = parser.parse_args()
 
     # Other settings
+    cfg.log_wandb = True
     cfg.beta1 = 0.9
     cfg.beta2 = 0.95
 
@@ -90,12 +94,20 @@ if __name__ == '__main__':
     cfg.lr_decay_iters = cfg.max_iters
     cfg.min_lr = cfg.lr/10.0  #
     cfg.decay_lr = not cfg.fixed_lr
-
     cfg.eval_batch_size = cfg.batch_size
 
+    # Init wandb
+    if cfg.log_wandb:
+        wandb.init(
+            project="sysid-meta",
+            #name="run1",
+            # track hyperparameters and run metadata
+            config=vars(cfg)
+        )
+
     # Set seed for reproducibility
-    torch.manual_seed(44)
-    np.random.seed(45)
+    torch.manual_seed(cfg.seed)
+    np.random.seed(cfg.seed)
 
     # Create out dir
     model_dir = Path(cfg.model_dir)
@@ -213,6 +225,8 @@ if __name__ == '__main__':
         LOSS_ITR.append(loss.item())
         if iter_num % 100 == 0:
             print(f"\n{iter_num=} {loss=:.4f} {loss_val=:.4f} {lr_iter=}\n")
+            if cfg.log_wandb:
+                wandb.log({"loss": loss, "loss_val": loss_val})
 
         loss.backward()
         optimizer.step()
@@ -236,6 +250,8 @@ if __name__ == '__main__':
         'cfg': cfg,
     }
     torch.save(checkpoint, cfg.model_dir / f"{cfg.out_file}_last.pt")
-    
+
+    if cfg.log_wandb:
+        wandb.finish()
 
 
