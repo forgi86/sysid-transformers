@@ -18,7 +18,7 @@ if __name__ == "__main__":
     dtype = "float64"
     time_start = time.time()
     for _ in range(1000):
-        A, B, C, D = drss_matrices(20, 1, 1, dtype=dtype)#, positive_real=True)
+        A, B, C, D = drss_matrices(100, 1, 1, mag_range=(0.5, 0.97), phase_range=(0, math.pi / 2), dtype=dtype)#, positive_real=True)
 
         u = np.random.randn(seq_len, nu).astype(dtype)
         y = dlsim(A, B, C, D, u)
