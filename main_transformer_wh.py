@@ -249,7 +249,7 @@ if __name__ == '__main__':
         'best_val_loss': best_val_loss,
         'cfg': cfg,
     }
-    torch.save(checkpoint, cfg.model_dir / f"{cfg.out_file}_last.pt")
+    torch.save(checkpoint, model_dir / f"{cfg.out_file}_last.pt")
 
     if cfg.log_wandb:
         wandb.finish()
