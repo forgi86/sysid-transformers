@@ -169,6 +169,80 @@ class WHDataset(IterableDataset):
             yield torch.tensor(y), torch.tensor(u)
 
 
+class PWHDataset(IterableDataset):
+    def __init__(self, nx=50, nu=1, ny=1, nbr=10, seq_len=1024, random_order=True,
+                 strictly_proper=True, normalize=True, dtype="float32", **mdlargs):
+        super(PWHDataset).__init__()
+        self.nx = nx
+        self.nu = nu
+        self.ny = ny
+        self.nbr = nbr
+        self.seq_len = seq_len
+        self.strictly_proper = strictly_proper
+        self.dtype = dtype
+        self.normalize = normalize
+        self.strictly_proper = strictly_proper
+        self.random_order = random_order
+        self.mdlargs = mdlargs
+
+    def __iter__(self):
+
+        # A simple ff neural network
+        def nn_fun(x):
+            out = x @ w1.transpose() + b1
+            out = np.tanh(out)
+            out = out @ w2.transpose() + b2
+            return out
+
+        while True:  # infinite dataset
+            # for _ in range(1000):
+
+            n_in = 1
+            n_out = 1
+            n_hidden = 128
+            n_skip = 200
+
+            w1 = np.random.randn(n_hidden, n_in) / np.sqrt(n_in) * 1.0
+            b1 = np.random.randn(1, n_hidden) * 1.0
+            w2 = np.random.randn(n_out, n_hidden) / np.sqrt(n_hidden) * 5/3
+            b2 = np.random.randn(1, n_out) * 1.0
+
+            G1 = drss_matrices(states=np.random.randint(1, self.nx+1) if self.random_order else self.nx,
+                               inputs=1,
+                               outputs=1,
+                               strictly_proper=self.strictly_proper,
+                               **self.mdlargs)
+
+            G2 = drss_matrices(states=np.random.randint(1, self.nx+1) if self.random_order else self.nx,
+                               inputs=1,
+                               outputs=1,
+                               strictly_proper=False,
+                               **self.mdlargs)
+
+            u = np.random.randn(self.seq_len + n_skip, 1)  # input to be improved (filtered noise, multisine, etc)
+
+            # G1
+            y1 = dlsim(*G1, u)
+            y1 = (y1 - y1[n_skip:].mean(axis=0)) / (y1[n_skip:].std(axis=0) + 1e-6)
+
+            # F
+            y2 = nn_fun(y1)
+
+            # G2
+            y3 = dlsim(*G2, y2)
+
+            u = u[n_skip:]
+            y = y3[n_skip:]
+
+            if self.normalize:
+                y = (y - y.mean(axis=0)) / (y.std(axis=0) + 1e-6)
+
+            u = u.astype(self.dtype)
+            y = y.astype(self.dtype)
+
+            yield torch.tensor(y), torch.tensor(u)
+
+            
 if __name__ == "__main__":
     train_ds = WHDataset(nx=5, seq_len=1000, mag_range=(0.5, 0.96), phase_range=(0, math.pi / 3))
     # train_ds = LinearDynamicalDataset(nx=5, nu=2, ny=3, seq_len=1000)
