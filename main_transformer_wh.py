@@ -107,7 +107,7 @@ if __name__ == '__main__':
 
     # Set seed for reproducibility
     torch.manual_seed(cfg.seed)
-    np.random.seed(cfg.seed)
+    np.random.seed(cfg.seed) # not needed? All randomness now handled with generators
 
     # Create out dir
     model_dir = Path(cfg.model_dir)
@@ -122,12 +122,14 @@ if __name__ == '__main__':
     torch.set_float32_matmul_precision("high")
 
     # Create data loader
-    train_ds = WHDataset(nx=cfg.nx, nu=cfg.nu, ny=cfg.ny, seq_len=cfg.seq_len, mag_range=cfg.mag_range,
-                         phase_range=cfg.phase_range)
+    train_ds = WHDataset(nx=cfg.nx, nu=cfg.nu, ny=cfg.ny, seq_len=cfg.seq_len,
+                         mag_range=cfg.mag_range, phase_range=cfg.phase_range,
+                         model_seed=cfg.seed, data_seed=cfg.seed+1) #  interesting for the future!, fixed_model=True)
     train_dl = DataLoader(train_ds, batch_size=cfg.batch_size, num_workers=cfg.threads)
 
-    val_ds = WHDataset(nx=cfg.nx, nu=cfg.nu, ny=cfg.ny, seq_len=cfg.seq_len, mag_range=cfg.mag_range,
-                       phase_range=cfg.phase_range)
+    val_ds = WHDataset(nx=cfg.nx, nu=cfg.nu, ny=cfg.ny, seq_len=cfg.seq_len,
+                       mag_range=cfg.mag_range, phase_range=cfg.phase_range,
+                       model_seed=cfg.seed+2, data_seed=cfg.seed+3)
     val_dl = DataLoader(val_ds, batch_size=cfg.eval_batch_size, num_workers=cfg.threads)
 
     model_args = dict(n_layer=cfg.n_layer, n_head=cfg.n_head, n_embd=cfg.n_embd, n_y=1, n_u=1, block_size=cfg.block_size,
