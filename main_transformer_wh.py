@@ -126,13 +126,13 @@ if __name__ == '__main__':
     # Create data loader
     train_ds = WHDataset(nx=cfg.nx, nu=cfg.nu, ny=cfg.ny, seq_len=cfg.seq_len,
                          mag_range=cfg.mag_range, phase_range=cfg.phase_range,
-                         model_seed=cfg.seed, data_seed=cfg.seed+1, fixed_system=cfg.fixed_system)
+                         system_seed=cfg.seed, data_seed=cfg.seed+1, fixed_system=cfg.fixed_system)
     train_dl = DataLoader(train_ds, batch_size=cfg.batch_size, num_workers=cfg.threads)
 
     # if we work with a constant model we also validate with the same (thus same seed!)
     val_ds = WHDataset(nx=cfg.nx, nu=cfg.nu, ny=cfg.ny, seq_len=cfg.seq_len,
                        mag_range=cfg.mag_range, phase_range=cfg.phase_range,
-                       model_seed=cfg.seed if cfg.fixed_system else cfg.seed+2,
+                       system_seed=cfg.seed if cfg.fixed_system else cfg.seed+2,
                        data_seed=cfg.seed+3, fixed_system=cfg.fixed_system)
     val_dl = DataLoader(val_ds, batch_size=cfg.eval_batch_size, num_workers=cfg.threads)
 

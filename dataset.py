@@ -37,7 +37,7 @@ class LinearDynamicalDataset(IterableDataset):
 class WHDataset(IterableDataset):
     def __init__(self, nx=5, nu=1, ny=1, seq_len=600, random_order=True,
                  strictly_proper=True, normalize=True, dtype="float32",
-                 fixed_system=False, model_seed=None, data_seed=None, **mdlargs):
+                 fixed_system=False, system_seed=None, data_seed=None, **mdlargs):
         super(WHDataset).__init__()
         self.nx = nx
         self.nu = nu
@@ -48,7 +48,7 @@ class WHDataset(IterableDataset):
         self.normalize = normalize
         self.strictly_proper = strictly_proper
         self.random_order = random_order  # random number of states from 1 to nx
-        self.model_rng = np.random.default_rng(model_seed)  # source of randomness for model generation
+        self.system_rng = np.random.default_rng(system_seed)  # source of randomness for model generation
         self.data_rng = np.random.default_rng(data_seed)  # source of randomness for model generation
         self.fixed_system = fixed_system  # same model at each iteration (classical identification)
         self.mdlargs = mdlargs
@@ -68,45 +68,45 @@ class WHDataset(IterableDataset):
         n_skip = 200
 
         if self.fixed_system:  # same model at each step, generate only once!
-            w1 = self.model_rng.normal(size=(n_hidden, n_in)) / np.sqrt(n_in) * 5 / 3
-            b1 = self.model_rng.normal(size=(1, n_hidden)) * 1.0
-            w2 = self.model_rng.normal(size=(n_out, n_hidden)) / np.sqrt(n_hidden)
-            b2 = self.model_rng.normal(size=(1, n_out)) * 1.0
+            w1 = self.system_rng.normal(size=(n_hidden, n_in)) / np.sqrt(n_in) * 5 / 3
+            b1 = self.system_rng.normal(size=(1, n_hidden)) * 1.0
+            w2 = self.system_rng.normal(size=(n_out, n_hidden)) / np.sqrt(n_hidden)
+            b2 = self.system_rng.normal(size=(1, n_out)) * 1.0
 
-            G1 = drss_matrices(states=self.model_rng.integers(1, self.nx+1) if self.random_order else self.nx,
+            G1 = drss_matrices(states=self.system_rng.integers(1, self.nx+1) if self.random_order else self.nx,
                                inputs=1,
                                outputs=1,
                                strictly_proper=self.strictly_proper,
-                               rng=self.model_rng,
+                               rng=self.system_rng,
                                **self.mdlargs)
 
-            G2 = drss_matrices(states=self.model_rng.integers(1, self.nx+1) if self.random_order else self.nx,
+            G2 = drss_matrices(states=self.system_rng.integers(1, self.nx+1) if self.random_order else self.nx,
                                inputs=1,
                                outputs=1,
                                strictly_proper=False,
-                               rng=self.model_rng,
+                               rng=self.system_rng,
                                **self.mdlargs)
 
         while True:  # infinite dataset
 
             if not self.fixed_system:  # different model for different instances!
-                w1 = self.model_rng.normal(size=(n_hidden, n_in)) / np.sqrt(n_in) * 5 / 3
-                b1 = self.model_rng.normal(size=(1, n_hidden)) * 1.0
-                w2 = self.model_rng.normal(size=(n_out, n_hidden)) / np.sqrt(n_hidden)
-                b2 = self.model_rng.normal(size=(1, n_out)) * 1.0
+                w1 = self.system_rng.normal(size=(n_hidden, n_in)) / np.sqrt(n_in) * 5 / 3
+                b1 = self.system_rng.normal(size=(1, n_hidden)) * 1.0
+                w2 = self.system_rng.normal(size=(n_out, n_hidden)) / np.sqrt(n_hidden)
+                b2 = self.system_rng.normal(size=(1, n_out)) * 1.0
 
-                G1 = drss_matrices(states=self.model_rng.integers(1, self.nx+1) if self.random_order else self.nx,
+                G1 = drss_matrices(states=self.system_rng.integers(1, self.nx+1) if self.random_order else self.nx,
                                    inputs=1,
                                    outputs=1,
                                    strictly_proper=self.strictly_proper,
-                                   rng=self.model_rng,
+                                   rng=self.system_rng,
                                    **self.mdlargs)
 
-                G2 = drss_matrices(states=self.model_rng.integers(1, self.nx+1) if self.random_order else self.nx,
+                G2 = drss_matrices(states=self.system_rng.integers(1, self.nx+1) if self.random_order else self.nx,
                                    inputs=1,
                                    outputs=1,
                                    strictly_proper=False,
-                                   rng=self.model_rng,
+                                   rng=self.system_rng,
                                    **self.mdlargs)
 
             #u = np.random.randn(self.seq_len + n_skip, 1)  # input to be improved (filtered noise, multisine, etc)
@@ -212,7 +212,7 @@ class PWHDataset(IterableDataset):
 if __name__ == "__main__":
     train_ds = WHDataset(nx=2, seq_len=4, mag_range=(0.5, 0.96),
                          phase_range=(0, math.pi / 3),
-                         model_seed=42, data_seed=445, fixed_system=False)
+                         system_seed=42, data_seed=445, fixed_system=False)
     # train_ds = LinearDynamicalDataset(nx=5, nu=2, ny=3, seq_len=1000)
     train_dl = DataLoader(train_ds, batch_size=2)
     batch_y, batch_u = next(iter(train_dl))
