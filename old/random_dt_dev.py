@@ -2,7 +2,7 @@ import math
 from numpy import cos, sin
 from numpy.random import rand
 from numpy.linalg import solve
-from lti import drss_matrices, dlsim, drss_matrices_old
+from lti import drss_matrices, dlsim
 
 
 if __name__ == "__main__":
@@ -17,8 +17,10 @@ if __name__ == "__main__":
     nu = 1
     dtype = "float64"
     time_start = time.time()
+    rng = np.random.default_rng(44)
     for _ in range(1000):
-        A, B, C, D = drss_matrices(20, 1, 1, dtype=dtype)#, positive_real=True)
+        A, B, C, D = drss_matrices(10, 1, 1, mag_range=(0.5, 0.97),
+                                   phase_range=(0, math.pi / 2), dtype=dtype, rng=rng)
 
         u = np.random.randn(seq_len, nu).astype(dtype)
         y = dlsim(A, B, C, D, u)

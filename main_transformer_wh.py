@@ -9,11 +9,12 @@ from torch.utils.data import DataLoader
 from model import GPTConfig, GPT, warmup_cosine_lr
 import tqdm
 import argparse
+import wandb
 
 
 if __name__ == '__main__':
 
-    parser = argparse.ArgumentParser(description='State-space neural network tests')
+    parser = argparse.ArgumentParser(description='Meta system identification with transformers')
 
     # Overall
     parser.add_argument('--model-dir', type=str, default="out", metavar='S',
@@ -24,6 +25,8 @@ if __name__ == '__main__':
                         help='Loaded model name (when resuming)')
     parser.add_argument('--init-from', type=str, default="scratch", metavar='S',
                         help='Init from (scratch|resume|pretrained)')
+    parser.add_argument('--seed', type=int, default=42, metavar='N',
+                        help='Seed for random number generation')
 
     # Dataset
     parser.add_argument('--nx', type=int, default=5, metavar='N',
@@ -34,10 +37,12 @@ if __name__ == '__main__':
                         help='model order (default: 5)')
     parser.add_argument('--seq-len', type=int, default=600, metavar='N',
                         help='sequence length (default: 600)')
-    parser.add_argument('--mag_range', type=tuple, default=(0.4, 0.97), metavar='N',
+    parser.add_argument('--mag_range', type=tuple, default=(0.5, 0.97), metavar='N',
                         help='sequence length (default: 600)')
     parser.add_argument('--phase_range', type=tuple, default=(0.0, math.pi/2), metavar='N',
                         help='sequence length (default: 600)')
+    parser.add_argument('--fixed-system', action='store_true', default=False,
+                        help='If True, keep the same model all the times')
 
     # Model
     parser.add_argument('--n-layer', type=int, default=12, metavar='N',
@@ -82,6 +87,7 @@ if __name__ == '__main__':
     cfg = parser.parse_args()
 
     # Other settings
+    cfg.log_wandb = False#True
     cfg.beta1 = 0.9
     cfg.beta2 = 0.95
 
@@ -90,12 +96,20 @@ if __name__ == '__main__':
     cfg.lr_decay_iters = cfg.max_iters
     cfg.min_lr = cfg.lr/10.0  #
     cfg.decay_lr = not cfg.fixed_lr
-
     cfg.eval_batch_size = cfg.batch_size
 
+    # Init wandb
+    if cfg.log_wandb:
+        wandb.init(
+            project="sysid-meta",
+            #name="run1",
+            # track hyperparameters and run metadata
+            config=vars(cfg)
+        )
+
     # Set seed for reproducibility
-    torch.manual_seed(44)
-    np.random.seed(45)
+    torch.manual_seed(cfg.seed)
+    np.random.seed(cfg.seed) # not needed? All randomness now handled with generators
 
     # Create out dir
     model_dir = Path(cfg.model_dir)
@@ -110,12 +124,16 @@ if __name__ == '__main__':
     torch.set_float32_matmul_precision("high")
 
     # Create data loader
-    train_ds = WHDataset(nx=cfg.nx, nu=cfg.nu, ny=cfg.ny, seq_len=cfg.seq_len, mag_range=cfg.mag_range,
-                         phase_range=cfg.phase_range)
+    train_ds = WHDataset(nx=cfg.nx, nu=cfg.nu, ny=cfg.ny, seq_len=cfg.seq_len,
+                         mag_range=cfg.mag_range, phase_range=cfg.phase_range,
+                         system_seed=cfg.seed, data_seed=cfg.seed+1, fixed_system=cfg.fixed_system)
     train_dl = DataLoader(train_ds, batch_size=cfg.batch_size, num_workers=cfg.threads)
 
-    val_ds = WHDataset(nx=cfg.nx, nu=cfg.nu, ny=cfg.ny, seq_len=cfg.seq_len, mag_range=cfg.mag_range,
-                       phase_range=cfg.phase_range)
+    # if we work with a constant model we also validate with the same (thus same seed!)
+    val_ds = WHDataset(nx=cfg.nx, nu=cfg.nu, ny=cfg.ny, seq_len=cfg.seq_len,
+                       mag_range=cfg.mag_range, phase_range=cfg.phase_range,
+                       system_seed=cfg.seed if cfg.fixed_system else cfg.seed+2,
+                       data_seed=cfg.seed+3, fixed_system=cfg.fixed_system)
     val_dl = DataLoader(val_ds, batch_size=cfg.eval_batch_size, num_workers=cfg.threads)
 
     model_args = dict(n_layer=cfg.n_layer, n_head=cfg.n_head, n_embd=cfg.n_embd, n_y=1, n_u=1, block_size=cfg.block_size,
@@ -213,6 +231,8 @@ if __name__ == '__main__':
         LOSS_ITR.append(loss.item())
         if iter_num % 100 == 0:
             print(f"\n{iter_num=} {loss=:.4f} {loss_val=:.4f} {lr_iter=}\n")
+            if cfg.log_wandb:
+                wandb.log({"loss": loss, "loss_val": loss_val})
 
         loss.backward()
         optimizer.step()
@@ -235,7 +255,9 @@ if __name__ == '__main__':
         'best_val_loss': best_val_loss,
         'cfg': cfg,
     }
-    torch.save(checkpoint, cfg.model_dir / f"{cfg.out_file}_last.pt")
-    
+    torch.save(checkpoint, model_dir / f"{cfg.out_file}_last.pt")
+
+    if cfg.log_wandb:
+        wandb.finish()
 
 
