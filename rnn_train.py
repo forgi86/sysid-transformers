@@ -1,11 +1,12 @@
 import torch
 from torch import nn
-from dataset import LinearDynamicalDataset
+from dataset import LinearDynamicalDataset, WHDataset
 from torch.utils.data import DataLoader
 import matplotlib.pyplot as plt
 import numpy as np
 from lstm_model import LSTModel
 from rnn_model import RNNModel
+import math
 
 
 # torch.cuda.is_available() checks and returns a Boolean True if a GPU is available, else it'll return False
@@ -21,15 +22,15 @@ else:
     print("GPU not available, CPU used")
 
 # arguments
-nx = 5
-nu = 1
+nx = 50
+nu = 3
 ny = 1
 seq_length = 300
-max_iters = 200000
+max_iters = 500000
 batch_size = 64
 
-train_ds = LinearDynamicalDataset(nx=nx, nu=nu, ny=ny, seq_len=seq_length, normalize=True)
-train_dl = DataLoader(train_ds, batch_size=batch_size, num_workers=4)
+train_ds = LinearDynamicalDataset(nx=nx, nu=nu, ny=ny, seq_len=seq_length)
+train_dl = DataLoader(train_ds, batch_size=batch_size, num_workers=2)
 
 # Instantiate the model with hyperparameters
 model = LSTModel(input_size=nu + ny, output_size=ny, hidden_dim=512, n_layers=4)
@@ -47,7 +48,7 @@ optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 model.train()
 for itr, (batch_y, batch_u) in enumerate(train_dl):
 
-    if itr % 50000 == 0:
+    if itr % 100000 == 0:
         torch.save(model.state_dict(), 'trained_models/lstm_model'+str(itr))
     if itr >= max_iters:
         break
