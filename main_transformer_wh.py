@@ -27,6 +27,8 @@ if __name__ == '__main__':
                         help='Init from (scratch|resume|pretrained)')
     parser.add_argument('--seed', type=int, default=42, metavar='N',
                         help='Seed for random number generation')
+    parser.add_argument('--log-wandb', action='store_true', default=False,
+                        help='disables CUDA training')
 
     # Dataset
     parser.add_argument('--nx', type=int, default=5, metavar='N',
@@ -87,7 +89,6 @@ if __name__ == '__main__':
     cfg = parser.parse_args()
 
     # Other settings
-    cfg.log_wandb = False#True
     cfg.beta1 = 0.9
     cfg.beta2 = 0.95
 

@@ -9,3 +9,6 @@ run main_transformer_wh --fixed-system --seed 1 --init-from pretrained --in-file
 
 # big transformer tuned to a specific wh model
 run main_transformer_wh --fixed-system --seed 1 --init-from pretrained --in-file ckpt_big_wh --out-file ckpt_big_wh_adapt --max-iter 201 --batch-size 20 --fixed-lr --lr 1e-4 --warmup-iters 0 --cuda-device cuda:0
+
+# small transformer learned on a specific wh model
+run main_transformer_wh --fixed-system --seed 1 --init-from scratch --out-file ckpt_small_wh_single --max-iter 6000 --fixed-lr --lr 1e-4 --warmup-iters 0 --cuda-device cuda:0 --log-wandb
