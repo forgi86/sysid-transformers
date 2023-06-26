@@ -94,7 +94,8 @@ class TransformerEncoderLayer(nn.Module):
     def __init__(self, d_model, n_head, dropout=0.0, bias=False):
         super().__init__()
         self.ln_1 = LayerNorm(d_model, bias=bias)
-        self.self_attn = SelfAttention(d_model, n_head, dropout=dropout, causal=False, bias=bias)
+        self.self_attn = SelfAttention(d_model, n_head, dropout=dropout, causal=False, bias=bias) # encoder is never causal
+        
         self.ln_2 = LayerNorm(d_model, bias=bias)
         self.mlp = MLP(d_model)
 
