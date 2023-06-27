@@ -12,3 +12,6 @@ run main_transformer_wh --fixed-system --seed 1 --init-from pretrained --in-file
 
 # small transformer learned on a specific wh model
 run main_transformer_wh --fixed-system --seed 1 --init-from scratch --out-file ckpt_small_wh_single --max-iter 6000 --fixed-lr --lr 1e-4 --warmup-iters 0 --cuda-device cuda:0 --log-wandb
+
+# encoder-decoder simulation transformer on linear systems
+run main_transformer_lin_encdec_sim --bias --log-wandb
