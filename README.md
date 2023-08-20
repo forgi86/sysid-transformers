@@ -20,8 +20,8 @@ Decoder-only (GPT-like) Transformer architecture for model-free one-step-ahead p
 
 Encoder-decoder (machine-translation-like) Transformer architecture for model-free multi-step-ahead simulation:
 
-![machine-translation-like model-free simulation](fig/encoder_decoder_architecture.png "Generalized multi-step-ahead simulation")
-
+<!-- ![machine-translation-like model-free simulation](fig/encoder_decoder_architecture.png "Generalized multi-step-ahead simulation") -->
+<img src="fig/encoder_decoder_architecture.png"  width="1400">
 
 # Software requirements:
 Experiments were performed on a Python 3.11 conda environment with
