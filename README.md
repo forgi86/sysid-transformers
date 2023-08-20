@@ -4,30 +4,17 @@ This repository contains the Python code to reproduce the results of the paper d
 by Marco Forgione, Filippo Pura and Dario Piga.
 
 
-* We introduce the concept of model-free meta learning for System Identification. 
+We introduce the concept of model-free meta learning for System Identification, where a *generalized* model is able to describe an entire class of dynamical systems,
+instead of a single instance. The generalized model is able to understand the underlying dynamics from a context of provided input/output samples and to 
+perform a task such as one-step-ahead prediction or multi-step-ahead simulation, that would otherwise require a model trained on each particular datasets.
 
 
-# Block Diagram
+# Architectures
 
-The block diagram below illustrates the proposed multi-step simulation error minimization approach applied to a
-state-space model. Quantities in red are tunable optimization variable (so as the parameters of the state and output
-neural network mappings).
- 
-At each iteration of the gradient-based optimization loop:
+GPT-like decoder-only architecture for generalized one-step-ahead prediction: 
 
-1. A batch consisting of q length-m subsequences of measured input, measured output, and hidden state is extracted from the training 
-dataset (and from the tunable hidden state sequence)
-1. The system's simulated state and output subsequences are obtained by applying m-step-ahead simulation
- to the input subsequences. The initial condition is taken as the first element of the hidden state sequence 
-1. The fit loss is computed as the discrepancy between measured and simulated output; the consistency 
-  loss is computed as the discrepancy between hidden and simulated state; the total loss is a defined as a weighted
-  sum of the fit and consistency loss
-1. Derivatives of the total loss w.r.t. the hidden state and the neural network parameters are computed via
-  back-propagation
-1. Using the derivatives computed at the previous step, a gradient-based optimization step is performed. The hidden state and neural network parameters are updated 
-  in the negative gradient direction, aiming to minimize the total loss
+![GPT](fig/decoder_architecture.png "Generalized one-step-ahead predictor")
 
-![GPT](fig/.decoder_architecture.pdf "Generalized one-step-ahead predictor")
 
 # Software requirements:
 Experiments were performed on a Python 3.11 conda environment with
