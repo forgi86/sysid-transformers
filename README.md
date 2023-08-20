@@ -13,7 +13,8 @@ perform a task such as one-step-ahead prediction or multi-step-ahead simulation,
 
 Decoder-only (GPT-like) Transformer architecture for model-free one-step-ahead prediction: 
 
-![GPT-like model-free prediction](fig/decoder_architecture.png "Generalized one-step-ahead predictor")
+<!-- ![GPT-like model-free prediction](fig/decoder_architecture.png "Generalized one-step-ahead predictor") -->
+<img src="fig/decoder_architecture.png"  width="600">
 
 ## Multi-step-ahead model-free simulation
 
