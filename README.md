@@ -9,13 +9,13 @@ instead of a single instance. The generalized model is able to understand the un
 perform a task such as one-step-ahead prediction or multi-step-ahead simulation, that would otherwise require a model trained on each particular datasets.
 
 
-# One-step-ahead prediction
+## One-step-ahead model-free prediction
 
 Decoder-only (GPT-like) Transformer architecture for model-free one-step-ahead prediction: 
 
 ![GPT-like model-free prediction](fig/decoder_architecture.png "Generalized one-step-ahead predictor")
 
-# Multi-step-ahead simulation
+## Multi-step-ahead model-free simulation
 
 Encoder-decoder (machine-translation-like) Transformer architecture for model-free multi-step-ahead simulation:
 
