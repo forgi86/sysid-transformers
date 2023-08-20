@@ -57,8 +57,8 @@ class CausalSelfAttention(nn.Module):
         if not self.flash:
             print("WARNING: using slow attention. Flash Attention requires PyTorch >= 2.0")
             # causal mask to ensure that attention is only applied to the left in the input sequence
-            self.register_buffer("bias", torch.tril(torch.ones(config.block_size, config.block_size))
-                                 .view(1, 1, config.block_size, config.block_size))
+            self.register_buffer("bias", torch.tril(torch.ones(config.seq_len_ctx, config.seq_len_ctx))
+                                 .view(1, 1, config.seq_len_ctx, config.seq_len_ctx))
 
     def forward(self, x):
         B, T, C = x.size()  # batch size, sequence length, embedding dimensionality (n_embd)
@@ -135,12 +135,12 @@ class GPT(nn.Module):
     def __init__(self, config):
         super().__init__()
         assert config.vocab_size is not None
-        assert config.block_size is not None
+        assert config.seq_len_ctx is not None
         self.config = config
 
         self.transformer = nn.ModuleDict(dict(
             wte=nn.Embedding(config.vocab_size, config.n_embd),
-            wpe=nn.Embedding(config.block_size, config.n_embd),
+            wpe=nn.Embedding(config.seq_len_ctx, config.n_embd),
             drop=nn.Dropout(config.dropout),
             h=nn.ModuleList([Block(config) for _ in range(config.n_layer)]),
             ln_f=LayerNorm(config.n_embd, bias=config.bias),
@@ -185,7 +185,7 @@ class GPT(nn.Module):
     def forward(self, idx, targets=None):
         device = idx.device
         b, t = idx.size()
-        assert t <= self.config.block_size, f"Cannot forward sequence of length {t}, block size is only {self.config.block_size}"
+        assert t <= self.config.seq_len_ctx, f"Cannot forward sequence of length {t}, block size is only {self.config.seq_len_ctx}"
         pos = torch.arange(0, t, dtype=torch.long, device=device).unsqueeze(0)  # shape (1, t)
 
         # forward the GPT model itself
@@ -211,11 +211,11 @@ class GPT(nn.Module):
         # model surgery to decrease the block size if necessary
         # e.g. we may load the GPT2 pretrained model checkpoint (block size 1024)
         # but want to use a smaller block size for some smaller, simpler model
-        assert block_size <= self.config.block_size
-        self.config.block_size = block_size
+        assert block_size <= self.config.seq_len_ctx
+        self.config.seq_len_ctx = block_size
         self.transformer.wpe.weight = nn.Parameter(self.transformer.wpe.weight[:block_size])
         for block in self.transformer.h:
-            block.attn.bias = block.attn.bias[:, :, :block_size, :block_size]
+            block.mha.bias = block.mha.bias[:, :, :block_size, :block_size]
 
     @classmethod
     def from_pretrained(cls, model_type, override_args=None):
@@ -339,7 +339,7 @@ class GPT(nn.Module):
         # see PaLM paper Appendix B as ref: https://arxiv.org/abs/2204.02311
         N = self.get_num_params()
         cfg = self.config
-        L, H, Q, T = cfg.n_layer, cfg.n_head, cfg.n_embd // cfg.n_head, cfg.block_size
+        L, H, Q, T = cfg.n_layer, cfg.n_head, cfg.n_embd // cfg.n_head, cfg.seq_len_ctx
         flops_per_token = 6 * N + 12 * L * H * Q * T
         flops_per_fwdbwd = flops_per_token * T
         flops_per_iter = flops_per_fwdbwd * fwdbwd_per_iter
@@ -358,7 +358,7 @@ class GPT(nn.Module):
         """
         for _ in range(max_new_tokens):
             # if the sequence context is growing too long we must crop it at block_size
-            idx_cond = idx if idx.size(1) <= self.config.block_size else idx[:, -self.config.block_size:]
+            idx_cond = idx if idx.size(1) <= self.config.seq_len_ctx else idx[:, -self.config.seq_len_ctx:]
             # forward the model to get the logits for the index in the sequence
             logits, _ = self(idx_cond)
             # pluck the logits at the final step and scale by desired temperature
