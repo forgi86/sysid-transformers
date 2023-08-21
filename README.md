@@ -41,18 +41,23 @@ conda install pytorch -c pytorch
 To run the software, please make sure that this repository's root folder is added to 
 your PYTHONPATH.
 
+<!--
+
 # Citing
 
 If you find this project useful, we encourage you to:
 
 * Star this repository :star: 
 
+
+
 * Cite the [paper](https://arxiv.org/abs/2206.12928) 
 ```
 @article{forgione2023a,
-  title={dynoGPT: model-free meta learning of dynamical systems with Transformers?},
+  title={Model-free in-context learning of dynamical systems with Transformers},
   author={Forgione, M. and Pura, F. and Piga, D.},
   journal={arXiv preprint arXiv:2206.12928},
   year={2022}
-}
+} 
 ```
+-->
