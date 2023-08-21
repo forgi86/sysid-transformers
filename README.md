@@ -1,10 +1,10 @@
-# dynoGPT: model-free meta learning of dynamical systems with Transformers
+# Model-free in-context learning of dynamical systems with Transformers
 
-This repository contains the Python code to reproduce the results of the paper dynoGPT: model-free meta learning of dynamical systems with Transformers (in preparation, 2023)
+This repository contains the Python code to reproduce the results of the paper *Model-free in-context learning of dynamical systems with Transformers* (in preparation, 2023)
 by Marco Forgione, Filippo Pura and Dario Piga.
 
 
-We introduce the concept of model-free meta learning for System Identification, where a *generalized* model is able to describe an entire class of dynamical systems,
+We introduce the concept of model-free in-context learning for System Identification, where a *generalized* model is able to describe an entire class of dynamical systems,
 instead of a single instance. The generalized model is able to understand the underlying dynamics from a context of provided input/output samples and to 
 perform a task such as one-step-ahead prediction or multi-step-ahead simulation, that would otherwise require a model trained on each particular datasets.
 
