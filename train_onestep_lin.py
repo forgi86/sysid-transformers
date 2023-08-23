@@ -5,7 +5,7 @@ import numpy as np
 import math
 from dataset import LinearDynamicalDataset
 from torch.utils.data import DataLoader
-from model import GPTConfig, GPT
+from transformer_onestep import GPTConfig, GPT
 import tqdm
 import argparse
 

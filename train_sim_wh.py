@@ -6,8 +6,8 @@ import math
 from functools import partial
 from dataset import WHDataset, LinearDynamicalDataset
 from torch.utils.data import DataLoader
-from transformers_custom_sim import Config, TSTransformer
-from model import warmup_cosine_lr
+from transformer_sim import Config, TSTransformer
+from transformer_onestep import warmup_cosine_lr
 import tqdm
 import argparse
 import wandb

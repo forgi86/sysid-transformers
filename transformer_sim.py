@@ -254,4 +254,4 @@ if __name__ == "__main__":
     batch_u_new = batch_u[:, cfg.seq_len_ctx:, :]
 
     model.eval()
-    batch_y_new_sim = model(batch_y, batch_u, batch_y_new, batch_u_new)
+    batch_y_new_sim = model(batch_y, batch_u, batch_u_new)

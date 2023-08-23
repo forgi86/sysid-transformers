@@ -4,10 +4,9 @@ import torch
 import numpy as np
 import math
 from functools import partial
-from dataset import WHDataset, LinearDynamicalDataset
+from dataset import WHDataset
 from torch.utils.data import DataLoader
-from transformers_custom_sim import Config, TSTransformer
-from model import warmup_cosine_lr
+from transformer_onestep import GPTConfig, GPT, warmup_cosine_lr
 import tqdm
 import argparse
 import wandb
@@ -38,10 +37,8 @@ if __name__ == '__main__':
                         help='model order (default: 5)')
     parser.add_argument('--ny', type=int, default=1, metavar='N',
                         help='model order (default: 5)')
-    parser.add_argument('--seq-len-ctx', type=int, default=400, metavar='N',
-                        help='sequence length (default: 300)')
-    parser.add_argument('--seq-len-new', type=int, default=100, metavar='N',
-                        help='sequence length (default: 300)')
+    parser.add_argument('--seq-len', type=int, default=600, metavar='N',
+                        help='sequence length (default: 600)')
     parser.add_argument('--mag_range', type=tuple, default=(0.5, 0.97), metavar='N',
                         help='sequence length (default: 600)')
     parser.add_argument('--phase_range', type=tuple, default=(0.0, math.pi/2), metavar='N',
@@ -96,7 +93,7 @@ if __name__ == '__main__':
     cfg.beta2 = 0.95
 
     # Derived settings
-    #cfg.block_size = cfg.seq_len
+    cfg.block_size = cfg.seq_len
     cfg.lr_decay_iters = cfg.max_iters
     cfg.min_lr = cfg.lr/10.0  #
     cfg.decay_lr = not cfg.fixed_lr
@@ -128,49 +125,43 @@ if __name__ == '__main__':
     torch.set_float32_matmul_precision("high")
 
     # Create data loader
-    train_ds = LinearDynamicalDataset(nx=cfg.nx, nu=cfg.nu, ny=cfg.ny, seq_len=cfg.seq_len_ctx+cfg.seq_len_new)
-    #train_ds = WHDataset(nx=cfg.nx, nu=cfg.nu, ny=cfg.ny, seq_len=cfg.seq_len_ctx+cfg.seq_len_new,
-    #                     mag_range=cfg.mag_range, phase_range=cfg.phase_range,
-    #                     system_seed=cfg.seed, data_seed=cfg.seed+1, fixed_system=cfg.fixed_system)
+    train_ds = WHDataset(nx=cfg.nx, nu=cfg.nu, ny=cfg.ny, seq_len=cfg.seq_len,
+                         mag_range=cfg.mag_range, phase_range=cfg.phase_range,
+                         system_seed=cfg.seed, data_seed=cfg.seed+1, fixed_system=cfg.fixed_system)
     train_dl = DataLoader(train_ds, batch_size=cfg.batch_size, num_workers=cfg.threads)
 
     # if we work with a constant model we also validate with the same (thus same seed!)
-    #val_ds = WHDataset(nx=cfg.nx, nu=cfg.nu, ny=cfg.ny, seq_len=cfg.seq_len_ctx+cfg.seq_len_new,
-    #                   mag_range=cfg.mag_range, phase_range=cfg.phase_range,
-    #                   system_seed=cfg.seed if cfg.fixed_system else cfg.seed+2,
-    #                   data_seed=cfg.seed+3, fixed_system=cfg.fixed_system)
-    val_ds = LinearDynamicalDataset(nx=cfg.nx, nu=cfg.nu, ny=cfg.ny, seq_len=cfg.seq_len_ctx+cfg.seq_len_new)
+    val_ds = WHDataset(nx=cfg.nx, nu=cfg.nu, ny=cfg.ny, seq_len=cfg.seq_len,
+                       mag_range=cfg.mag_range, phase_range=cfg.phase_range,
+                       system_seed=cfg.seed if cfg.fixed_system else cfg.seed+2,
+                       data_seed=cfg.seed+3, fixed_system=cfg.fixed_system)
     val_dl = DataLoader(val_ds, batch_size=cfg.eval_batch_size, num_workers=cfg.threads)
 
-    model_args = dict(n_layer=cfg.n_layer, n_head=cfg.n_head, n_embd=cfg.n_embd, n_y=1, n_u=1,
-                      seq_len_ctx=cfg.seq_len_ctx, seq_len_new=cfg.seq_len_new,
-                       bias=cfg.bias, dropout=cfg.dropout)  
-    
+    model_args = dict(n_layer=cfg.n_layer, n_head=cfg.n_head, n_embd=cfg.n_embd, n_y=1, n_u=1, block_size=cfg.block_size,
+                      bias=cfg.bias, dropout=cfg.dropout)  # start with model_args from command line
+
     if cfg.init_from == "scratch":
-        gptconf = Config(**model_args)
-        model = TSTransformer(gptconf)
+        gptconf = GPTConfig(**model_args)
+        model = GPT(gptconf)
     elif cfg.init_from == "resume" or cfg.init_from == "pretrained":
         ckpt_path = model_dir / f"{cfg.in_file}.pt"
         checkpoint = torch.load(ckpt_path, map_location=device)
-        gptconf = Config(**checkpoint["model_args"])
-        model = TSTransformer(gptconf)
+        gptconf = GPTConfig(**checkpoint["model_args"])
+        model = GPT(gptconf)
         state_dict = checkpoint['model']
         # fix the keys of the state dictionary :(
         # honestly no idea how checkpoints sometimes get this prefix, have to debug more
-        #unwanted_prefix = '_orig_mod.'
-        #for k, v in list(state_dict.items()):
-        #    if k.startswith(unwanted_prefix):
-        #        state_dict[k[len(unwanted_prefix):]] = state_dict.pop(k)
+        unwanted_prefix = '_orig_mod.'
+        for k, v in list(state_dict.items()):
+            if k.startswith(unwanted_prefix):
+                state_dict[k[len(unwanted_prefix):]] = state_dict.pop(k)
         model.load_state_dict(state_dict)
     model.to(device)
 
     if cfg.compile:
         model = torch.compile(model)  # requires PyTorch 2.0
 
-    #optimizer = model.configure_optimizers(cfg.weight_decay, cfg.lr, (cfg.beta1, cfg.beta2), device_type)
-    #optimizer = torch.optim.AdamW(model.parameters(), lr=cfg.lr)
     optimizer = model.configure_optimizers(cfg.weight_decay, cfg.lr, (cfg.beta1, cfg.beta2), device_type)
-
     if cfg.init_from == "resume":
         optimizer.load_state_dict(checkpoint['optimizer'])
 
@@ -182,17 +173,7 @@ if __name__ == '__main__':
             if device_type == "cuda":
                 batch_y = batch_y.pin_memory().to(device, non_blocking=True)
                 batch_u = batch_u.pin_memory().to(device, non_blocking=True)
-            #_, loss_iter = model(batch_u, batch_y)
-            
-            batch_y_ctx = batch_y[:, :cfg.seq_len_ctx, :]
-            batch_u_ctx = batch_u[:, :cfg.seq_len_ctx, :]
-            batch_y_new = batch_y[:, cfg.seq_len_ctx:, :]
-            batch_u_new = batch_u[:, cfg.seq_len_ctx:, :]
-            batch_y_sim = model(batch_y_ctx, batch_u_ctx, batch_u_new)
-            loss_iter = torch.nn.functional.mse_loss(batch_y_new, batch_y_sim)
-            #loss_iter = torch.nn.functional.mse_loss(batch_y_new[:, 1:, :], batch_y_sim[:, :-1, :])
-
-
+            _, loss_iter = model(batch_u, batch_y)
             loss += loss_iter.item()
             if eval_iter == cfg.eval_iters:
                 break
@@ -247,16 +228,7 @@ if __name__ == '__main__':
         if device_type == "cuda":
             batch_y = batch_y.pin_memory().to(device, non_blocking=True)
             batch_u = batch_u.pin_memory().to(device, non_blocking=True)
-
-        batch_y_ctx = batch_y[:, :cfg.seq_len_ctx, :]
-        batch_u_ctx = batch_u[:, :cfg.seq_len_ctx, :]
-        batch_y_new = batch_y[:, cfg.seq_len_ctx:, :]
-        batch_u_new = batch_u[:, cfg.seq_len_ctx:, :]
-
-        batch_y_sim = model(batch_y_ctx, batch_u_ctx, batch_u_new)
-        loss = torch.nn.functional.mse_loss(batch_y_new, batch_y_sim)
-        #loss = torch.nn.functional.mse_loss(batch_y_new[:, 1:, :], batch_y_sim[:, :-1, :])
-
+        batch_y_pred, loss = model(batch_u, batch_y)
         LOSS_ITR.append(loss.item())
         if iter_num % 100 == 0:
             print(f"\n{iter_num=} {loss=:.4f} {loss_val=:.4f} {lr_iter=}\n")
