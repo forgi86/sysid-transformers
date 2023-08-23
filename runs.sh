@@ -15,3 +15,15 @@ run main_transformer_wh --fixed-system --seed 1 --init-from scratch --out-file c
 
 # encoder-decoder simulation transformer on linear systems
 run main_transformer_lin_encdec_sim --bias --log-wandb
+
+# encoder-decoder simulation transformer pre-trained on linear systems adapted on WH systems
+run main_transformer_wh_encdec_sim --bias --init-from pretrained --in-file ckpt_encdec_lin_sim --log-wandb
+
+# encoder-decoder simulation transformer pre-trained on linear systems adapted on WH systems
+run main_transformer_wh_encdec_sim --bias --init-from pretrained --in-file ckpt_encdec_lin_sim --log-wandb
+
+# same as above, longer training
+python main_transformer_wh_encdec_sim.py --bias --init-from pretrained --in-file ckpt_encdec_lin_sim --max-iters 5_000_000 --log-wandb
+
+# same as above, longer training, fixed lr
+python main_transformer_wh_encdec_sim.py --bias --init-from pretrained --in-file ckpt_encdec_lin_sim --fixed-lr --lr 1e-4 --warmup-iters 0 --max-iters 5_000_000 --log-wandb
