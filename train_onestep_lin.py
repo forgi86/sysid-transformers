@@ -26,8 +26,7 @@ if __name__ == '__main__':
     # Save/load settings
     model_dir = "out"
     out_file = "ckpt"
-    #init_from = "scratch"
-    init_from = "resume"
+    init_from = "scratch"  # "resume"
     in_file = "ckpt"
 
     # System settings
