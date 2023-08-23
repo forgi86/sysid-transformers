@@ -1,8 +1,8 @@
 # small transformer trained on LTI systems
-run train_onestep_wh --out-file ckpt_lin --cuda-device cuda:1
+run train_onestep_wh --out-file ckpt_onestep_lin --cuda-device cuda:1
 
 # big transformer trained on WH systems
-run train_onestep_wh --out-file ckpt_wh --seq-len 1024  --n-layer 12 --n-head 12 --n-embd 768 --batch-size 20 --cuda-device cuda:1
+run train_onestep_wh --out-file ckpt_onestep_wh_large --seq-len 1024  --n-layer 12 --n-head 12 --n-embd 768 --batch-size 20 --cuda-device cuda:1
 
 # encoder-decoder simulation transformer on LTI systems
 run train_sim_lin --bias --log-wandb
