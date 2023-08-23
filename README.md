@@ -23,13 +23,29 @@ Encoder-decoder (machine-translation-like) Transformer architecture for model-fr
 <!-- ![machine-translation-like model-free simulation](fig/encoder_decoder_architecture.png "Generalized multi-step-ahead simulation") -->
 <img src="fig/encoder_decoder_architecture.png"  width="1400">
 
+# Training scripts
+
+The main training scripts are:
+
+* ``train_onestep_lin.py``: Decoder-only transformer for one-step-ahead prediction on the LTI system class 
+* ``train_onestep_wh.py``: Decoder-only transformer for one-step-ahead prediction on the WH system class 
+* ``train_sim_lin.py``: Encoder-decoder-only transformer for multi-step-ahead simulation on the LTI system class 
+* ``train_sim_wh.py``: Encoder-decoder-only transformer for multi-step-ahead simulation on the LTI system class 
+
+All scripts except ``train_onestep_lin.py`` accept command-line arguments to customize the transformer architecture and aspects of the training. 
+For instance, the large one-step-ahead transformer described in the paper may be trained with the command:
+
+```
+python train_onestep_wh.py --out-file ckpt_onestep_wh_large --seq-len 1024  --n-layer 12 --n-head 12 --n-embd 768 --batch-size 20 --cuda-device cuda:1
+```
+
 # Software requirements:
 Experiments were performed on a Python 3.11 conda environment with
 
  * numpy
  * scipy
  * matplotlib
- * pytorch (>= 2.0)
+ * pytorch (>= 2.0.1)
  
 These dependencies may be installed through the commands:
 
@@ -38,8 +54,9 @@ conda install numpy scipy pandas matplotlib
 conda install pytorch -c pytorch
 ```
 
-To run the software, please make sure that this repository's root folder is added to 
-your PYTHONPATH.
+# Hardware requirements:
+While the scripts can be run on a CPU, training is notably slow in this setup. For faster and more efficient training, a GPU is highly recommended.
+To execute the paper's examples, we utilized a dedicated server equipped with an nVidia RTX 3090 GPU.
 
 <!--
 
