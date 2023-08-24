@@ -39,7 +39,7 @@ For instance, the large one-step-ahead transformer described in the paper may be
 python train_onestep_wh.py --out-file ckpt_onestep_wh_large --seq-len 1024  --n-layer 12 --n-head 12 --n-embd 768 --batch-size 20 --cuda-device cuda:1
 ```
 
-Already trained weights for the Transformers discussed in the example reported in the paper are available as assets in the [v0.2 Release](https://github.com/forgi86/sysid-transformers/releases/tag/v0.2)
+Already trained weights for the Transformers discussed in the example reported in the paper are available as assets in the [v0.2 Release](https://github.com/forgi86/sysid-transformers/releases/tag/v0.2) 
 
 # Software requirements:
 Experiments were performed on a Python 3.11 conda environment with
