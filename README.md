@@ -1,6 +1,6 @@
-# Model-free in-context learning of dynamical systems with Transformers
+# In-context learning for model-free system identification
 
-This repository contains the Python code to reproduce the results of the paper *Model-free in-context learning of dynamical systems with Transformers* (in preparation, 2023)
+This repository contains the Python code to reproduce the results of the paper *In-context learning for model-free system identification* (in preparation, 2023)
 by Marco Forgione, Filippo Pura and Dario Piga.
 
 
