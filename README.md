@@ -32,7 +32,7 @@ The training scripts are:
 * [train_sim_lin.py](train_sim_lin.py): Encoder-decoder Transformer for multi-step-ahead simulation on the LTI system class 
 * [train_sim_wh.py](train_sim_wh.py): Encoder-decoder Transformer for multi-step-ahead simulation on the WH system class 
 
-All scripts except ``train_onestep_lin.py`` accept command-line arguments to customize the architecture and aspects of the training. 
+All training scripts except ``train_onestep_lin.py`` accept command-line arguments to customize the architecture and aspects of the training. 
 For instance, the large one-step-ahead Transformer for the WH class described in the paper may be trained with the command:
 
 ```
