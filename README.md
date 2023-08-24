@@ -4,9 +4,9 @@ This repository contains the Python code to reproduce the results of the paper *
 by Marco Forgione, Filippo Pura and Dario Piga.
 
 
-We introduce the concept of model-free in-context learning for System Identification, where a *generalized* model is able to describe an entire class of dynamical systems,
-instead of a single instance. The generalized model is able to understand the underlying dynamics from a context of provided input/output samples and to 
-perform a task such as one-step-ahead prediction or multi-step-ahead simulation, that would otherwise require a model trained on each particular datasets.
+We introduce the concept of model-free in-context learning for System Identification, where a *meta model* is trained to describe an entire class of dynamical systems,
+instead of a single instance. The meta model is able to understand the underlying dynamics from a context of provided input/output samples and to 
+perform a task such as one-step-ahead prediction or multi-step-ahead simulation, that would otherwise require a model trained on each particular dataset.
 
 
 ## One-step-ahead model-free prediction
@@ -30,7 +30,7 @@ The main training scripts are:
 * ``train_onestep_lin.py``: Decoder-only transformer for one-step-ahead prediction on the LTI system class 
 * ``train_onestep_wh.py``: Decoder-only transformer for one-step-ahead prediction on the WH system class 
 * ``train_sim_lin.py``: Encoder-decoder-only transformer for multi-step-ahead simulation on the LTI system class 
-* ``train_sim_wh.py``: Encoder-decoder-only transformer for multi-step-ahead simulation on the LTI system class 
+* ``train_sim_wh.py``: Encoder-decoder-only transformer for multi-step-ahead simulation on the WH system class 
 
 All scripts except ``train_onestep_lin.py`` accept command-line arguments to customize the transformer architecture and aspects of the training. 
 For instance, the large one-step-ahead transformer described in the paper may be trained with the command:
