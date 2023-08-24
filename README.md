@@ -39,7 +39,7 @@ For instance, the large one-step-ahead Transformer for the WH class described in
 python train_onestep_wh.py --out-file ckpt_onestep_wh_large --seq-len 1024  --n-layer 12 --n-head 12 --n-embd 768 --batch-size 20 --cuda-device cuda:1
 ```
 
-Already-trained weights of all the Transformers discussed in the example reported in the paper are available as assets in the [v0.2 Release](https://github.com/forgi86/sysid-transformers/releases/tag/v0.2) 
+Already-trained weights of all the Transformers discussed in the example reported in the paper are available as assets in the [v0.2 Release](https://github.com/forgi86/sysid-transformers/releases/tag/v0.2).
 
 Jupyter notebooks that load the trained model and make predictions/simulations on new data are also available in the repo, e.g. [test_onestep_lin.ipynb](test_onestep_lin.ipynb) for one-step prediction on the LTI class.
 
@@ -59,7 +59,7 @@ conda install pytorch -c pytorch
 ```
 
 # Hardware requirements
-While the scripts can run on a CPU, execution may be frustratingly slow. For faster training, a GPU is highly recommended.
+While the scripts can run on CPU, execution may be frustratingly slow. For faster training, a GPU is highly recommended.
 To run the paper's examples, we utilized a dedicated server equipped with an nVidia RTX 3090 GPU.
 
 <!--
