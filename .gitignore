@@ -163,3 +163,9 @@ out/
 wandb/
 tmp/
 data
+
+/doc/paper/ms.blg
+/doc/paper/ms.bbl
+/doc/paper/ms.aux
+/doc/paper/ms.out
+/doc/paper/ms.log
