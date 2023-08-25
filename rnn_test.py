@@ -20,26 +20,29 @@ else:
     print("GPU not available, CPU used")
 
 
-nx = 50
-nu = 3
+nx = 5
+nu = 1
 ny = 1
-seq_length = 500
+seq_length = 300
+batch_size = 1
 
 criterion = nn.MSELoss()
 
 model = LSTModel(input_size=nu + ny, output_size=ny, hidden_dim=512, n_layers=4)
-model.load_state_dict(torch.load('trained_models/lstm_model_50nx_500000', map_location=device))
+model.load_state_dict(torch.load('trained_models/lstm_wh_model_1000000', map_location=device))
 
 # for name, param in model.named_parameters():
 #     if param.requires_grad:
 #         print(name, param.data)
 
-test_ds = LinearDynamicalDataset(nx=nx, nu=nu, ny=ny, seq_len=seq_length, normalize=True)
+#test_ds = LinearDynamicalDataset(nx=nx, nu=nu, ny=ny, seq_len=seq_length, normalize=True)
+test_ds = WHDataset(nx=nx, nu=nu, ny=ny, seq_len=seq_length, system_seed=42, data_seed=42)
 #test_ds = WHDataset(nx=nx, nu=nu, ny=ny, seq_len=seq_length, mag_range=(0.5, 0.97), phase_range=(0, math.pi/2))
-test_dl = DataLoader(test_ds, batch_size=1, num_workers=0)
+test_dl = DataLoader(test_ds, batch_size=batch_size, num_workers=0)
 
 model.eval()
-losses = []
+losses_one_step = []
+losses_sim = []
 with torch.no_grad():
     for itr, (batch_y, batch_u) in enumerate(test_dl):
 
@@ -47,15 +50,24 @@ with torch.no_grad():
             break
 
         input_seq = batch_u
+        start_zero = torch.zeros([batch_size, 1, ny])
+        input_y = torch.cat((start_zero, batch_y[:, :-1, :]), dim=1)
+        input_seq = torch.cat((input_seq, input_y), dim=2)
+
+        output, hidden = model(input_seq)
+        loss_one_step = criterion(output, batch_y)
+
+        print(loss_one_step)
+        losses_one_step.append(loss_one_step)
 
         init_sequence = 100
-        start_zero = torch.zeros([1, 1, ny])
+
+        input_seq = batch_u
+        start_zero = torch.zeros([batch_size, 1, ny])
         input_y = batch_y[:, 0:init_sequence, :]
         input_y = torch.cat((start_zero, input_y), dim=1)
         zeros = torch.zeros([1, seq_length - init_sequence - 1, ny])
         input_y = torch.cat((input_y, zeros), dim=1)
-
-        # zeros = torch.zeros([1, seq_length, ny])
         input_seq = torch.cat((input_seq, input_y), dim=2)
 
         results = []
@@ -80,21 +92,21 @@ with torch.no_grad():
         mean_loss = total_loss / (seq_length-init_sequence)
         print(mean_loss)
 
-        losses.append(mean_loss.detach().numpy())
+        losses_sim.append(mean_loss.detach().numpy())
 
-        fig, ax = plt.subplots(nu+1, 1, sharex=True)
+        # fig, ax = plt.subplots(nu+1, 1, sharex=True)
+        #
+        # for i in range(nu):
+        #     ax[i].set_title(f"Input {i+1}")
+        #     ax[i].plot(batch_u[0][:, i])
+        #
+        # ax[nu].set_title("Output")
+        # ax[nu].plot(batch_y[0, :, 0].detach().numpy())
+        # ax[nu].plot(out, c='red')
+        #
+        # plt.show()
 
-        for i in range(nu):
-            ax[i].set_title(f"Input {i+1}")
-            ax[i].plot(batch_u[0][:, i])
-
-        ax[nu].set_title("Output")
-        ax[nu].plot(batch_y[0, :, 0].detach().numpy())
-        ax[nu].plot(out, c='red')
-
-        plt.show()
-
-losses = np.array(losses)
-print(losses)
-print(np.mean(losses))
-np.save('lstm_50nx_sim', losses)
+losses_one_step = np.array(losses_one_step)
+losses_sim = np.array(losses_sim)
+np.save('lstm_big_wh_losses_one_step', losses_one_step)
+np.save('lstm_big_wh_losses_sim', losses_sim)

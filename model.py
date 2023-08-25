@@ -140,14 +140,14 @@ class GPT(nn.Module):
 
         self.transformer = nn.ModuleDict(dict(
             wte=nn.Linear(config.n_u + config.n_y, config.n_embd),  # we process continuous data
-            #wte=nn.Embedding(config.vocab_size, config.n_embd),
+            # wte=nn.Embedding(config.vocab_size, config.n_embd),
             wpe=nn.Embedding(config.block_size, config.n_embd),
             drop=nn.Dropout(config.dropout),
             h=nn.ModuleList([Block(config) for _ in range(config.n_layer)]),
             ln_f=LayerNorm(config.n_embd, bias=config.bias),
         ))
-        self.lm_head = nn.Linear(config.n_embd, config.n_y, bias=True) # False
-        #self.lm_head = nn.Linear(config.n_embd, config.n_y, bias=False) # False
+        self.lm_head = nn.Linear(config.n_embd, config.n_y, bias=True)  # False
+        # self.lm_head = nn.Linear(config.n_embd, config.n_y, bias=False) # False
 
         # init all weights
         self.apply(self._init_weights)
@@ -167,7 +167,7 @@ class GPT(nn.Module):
         params are actually used as weights in the final layer, so we include them.
         """
         n_params = sum(p.numel() for p in self.parameters())
-        #if non_embedding:
+        # if non_embedding:
         #    n_params -= self.transformer.wpe.weight.numel()
         return n_params
 
@@ -200,13 +200,213 @@ class GPT(nn.Module):
             # if we are given some desired targets also calculate the loss
             batch_y_pred = self.lm_head(x)
             loss = F.mse_loss(batch_y[:, 1:, :], batch_y_pred[:, :-1, :])
-            #loss = F.cross_entropy(batch_y_pred.view(-1, batch_y_pred.size(-1)), targets.view(-1), ignore_index=-1)
+            # loss = F.cross_entropy(batch_y_pred.view(-1, batch_y_pred.size(-1)), targets.view(-1), ignore_index=-1)
         else:
             # inference-time mini-optimization: only forward the lm_head on the very last position
             batch_y_pred = self.lm_head(x[:, [-1], :])  # note: using list [-1] to preserve the time dim
             loss = None
 
         return batch_y_pred, loss
+
+    def configure_optimizers(self, weight_decay, learning_rate, betas, device_type):
+        """
+        This long function is unfortunately doing something very simple and is being very defensive:
+        We are separating out all parameters of the model into two buckets: those that will experience
+        weight decay for regularization and those that won't (biases, and layernorm/embedding weights).
+        We are then returning the PyTorch optimizer object.
+        """
+
+        # separate out all parameters to those that will and won't experience regularizing weight decay
+        decay = set()
+        no_decay = set()
+        whitelist_weight_modules = (torch.nn.Linear,)
+        blacklist_weight_modules = (torch.nn.LayerNorm, LayerNorm, torch.nn.Embedding)
+        for mn, m in self.named_modules():
+            for pn, p in m.named_parameters():
+                fpn = '%s.%s' % (mn, pn) if mn else pn  # full param name
+                # random note: because named_modules and named_parameters are recursive
+                # we will see the same tensors p many many times. but doing it this way
+                # allows us to know which parent module any tensor p belongs to...
+                if pn.endswith('bias'):
+                    # all biases will not be decayed
+                    no_decay.add(fpn)
+                elif pn.endswith('weight') and isinstance(m, whitelist_weight_modules):
+                    # weights of whitelist modules will be weight decayed
+                    decay.add(fpn)
+                elif pn.endswith('weight') and isinstance(m, blacklist_weight_modules):
+                    # weights of blacklist modules will NOT be weight decayed
+                    no_decay.add(fpn)
+
+        # subtle: 'transformer.wte.weight' and 'lm_head.weight' are tied, so they
+        # will appear in the no_decay and decay sets respectively after the above.
+        # In addition, because named_parameters() doesn't return duplicates, it
+        # will only return the first occurence, key'd by 'transformer.wte.weight', below.
+        # so let's manually remove 'lm_head.weight' from decay set. This will include
+        # this tensor into optimization via transformer.wte.weight only, and not decayed.
+        #decay.remove('lm_head.weight')
+
+        # validate that we considered every parameter
+        param_dict = {pn: p for pn, p in self.named_parameters()}
+        inter_params = decay & no_decay
+        union_params = decay | no_decay
+        assert len(inter_params) == 0, "parameters %s made it into both decay/no_decay sets!" % (str(inter_params),)
+        assert len(
+            param_dict.keys() - union_params) == 0, "parameters %s were not separated into either decay/no_decay set!" \
+                                                    % (str(param_dict.keys() - union_params),)
+
+        # create the pytorch optimizer object
+        optim_groups = [
+            {"params": [param_dict[pn] for pn in sorted(list(decay))], "weight_decay": weight_decay},
+            {"params": [param_dict[pn] for pn in sorted(list(no_decay))], "weight_decay": 0.0},
+        ]
+        # new PyTorch nightly has a new 'fused' option for AdamW that is much faster
+        use_fused = (device_type == 'cuda') and ('fused' in inspect.signature(torch.optim.AdamW).parameters)
+        print(f"using fused AdamW: {use_fused}")
+        extra_args = dict(fused=True) if use_fused else dict()
+        optimizer = torch.optim.AdamW(optim_groups, lr=learning_rate, betas=betas, **extra_args)
+
+        return optimizer
+
+
+class GPTABCD(nn.Module):
+
+    def __init__(self, config, mtx, device):
+        super().__init__()
+        assert config.block_size is not None
+        self.config = config
+        self.device = device
+
+        self.transformer = nn.ModuleDict(dict(
+            wte=nn.Linear(config.n_u + config.n_y, config.n_embd),  # we process continuous data
+            #wte=nn.Embedding(config.vocab_size, config.n_embd),
+            wpe=nn.Embedding(config.block_size, config.n_embd),
+            drop=nn.Dropout(config.dropout),
+            h=nn.ModuleList([Block(config) for _ in range(config.n_layer)]),
+            ln_f=LayerNorm(config.n_embd, bias=config.bias),
+        ))
+        self.lm_head = nn.Linear(config.n_embd, mtx, bias=True) # False
+
+        # init all weights
+        self.apply(self._init_weights)
+        # apply special scaled init to the residual projections, per GPT-2 paper
+        for pn, p in self.named_parameters():
+            if pn.endswith('c_proj.weight'):
+                torch.nn.init.normal_(p, mean=0.0, std=0.02 / math.sqrt(2 * config.n_layer))
+
+        # report number of parameters
+        print("number of parameters: %.2fM" % (self.get_num_params() / 1e6,))
+
+    def get_num_params(self, non_embedding=True):
+        """
+        Return the number of parameters in the model.
+        For non-embedding count (default), the position embeddings get subtracted.
+        The token embeddings would too, except due to the parameter sharing these
+        params are actually used as weights in the final layer, so we include them.
+        """
+        n_params = sum(p.numel() for p in self.parameters())
+        #if non_embedding:
+        #    n_params -= self.transformer.wpe.weight.numel()
+        return n_params
+
+    def _init_weights(self, module):
+        if isinstance(module, nn.Linear):
+            torch.nn.init.normal_(module.weight, mean=0.0, std=0.02)
+            if module.bias is not None:
+                torch.nn.init.zeros_(module.bias)
+        elif isinstance(module, nn.Embedding):
+            torch.nn.init.normal_(module.weight, mean=0.0, std=0.02)
+
+    def __dlsim(self, A, B, C, D, u, x0=None):
+        batch_size, n_y, n_x = C.size()
+        if x0 is None:
+            x0 = torch.zeros((batch_size, n_x,), dtype=u.dtype).to(self.device)
+
+        _, seq_len, _ = u.size()
+        x_step = torch.clone(x0)
+        # x_step_list = []
+        # for x in x_step:
+        #     x_step_list.append(torch.clone(x))
+        out = []
+        for idx in range(seq_len):
+
+            # batch = []
+            # for b in range(batch_size):
+            #     u_step = u[b, idx, :]
+            #     batch.append(C[b] @ x_step_list[b] + D[b] @ u_step)
+            #     x_step_list[b] = A[b] @ x_step_list[b] + B[b] @ u_step
+            # batch = torch.stack(batch)
+
+            batch = (torch.bmm(C, x_step.view(batch_size, n_x, 1)) +
+                      torch.bmm(D, u[:, idx, :].view(batch_size, n_y, 1))).view(batch_size, n_y)
+            x_step = (torch.bmm(A, x_step.view(batch_size, n_x, 1)) +
+                      torch.bmm(B, u[:, idx, :].view(batch_size, n_y, 1))).view(batch_size, n_x)
+
+            out.append(batch)
+        out = torch.stack(out)
+        out = torch.transpose(out, 0, 1)
+        return out
+
+    def forward(self, batch_u, batch_y, A, B, C, D, compute_loss=True):
+        torch.autograd.set_detect_anomaly(True)
+        device = batch_u.device
+        b, t, nu = batch_u.size()
+        bb, tt, ny = batch_y.size()
+        assert (b == bb) and (t == tt)
+        assert t <= self.config.block_size, f"Cannot forward sequence of length {t}, block size is only {self.config.block_size}"
+        pos = torch.arange(0, t, dtype=torch.long, device=device).unsqueeze(0)  # shape (1, t)
+
+        batch_uy = torch.cat((batch_u, batch_y), dim=-1)
+        # forward the GPT model itself
+        tok_emb = self.transformer.wte(batch_uy)  # token embeddings of shape (b, t, n_embd)
+        pos_emb = self.transformer.wpe(pos)  # position embeddings of shape (1, t, n_embd)
+        x = self.transformer.drop(tok_emb + pos_emb)
+        for block in self.transformer.h:
+            x = block(x)
+        x = self.transformer.ln_f(x)
+
+        if compute_loss:
+            # if we are given some desired targets also calculate the loss
+            batch_systems_pred = self.lm_head(x)
+
+            batch_systems_pred = batch_systems_pred[:, -1, :]
+
+            n_x = B.size()[1]
+            n_u = B.size()[2]
+            n_y = C.size()[1]
+            idx = 0
+
+            A_pred = batch_systems_pred[:, idx:n_x**2].reshape(b, n_x, n_x)
+            idx += n_x**2
+
+            B_pred = batch_systems_pred[:, idx:idx + n_x * n_u].reshape(b, n_x, n_u)
+            idx += n_x * n_u
+
+            C_pred = batch_systems_pred[:, idx:idx + n_y * n_x].reshape(b, n_y, n_x)
+            idx += n_y * n_x
+
+            D_pred = batch_systems_pred[:, idx:idx + n_y ** 2].reshape(b, n_y, n_y)
+
+            batch_y_pred = self.__dlsim(A_pred, B_pred, C_pred, D_pred, batch_u)
+
+            # A = A.reshape(b, -1)
+            # B = B.reshape(b, -1)
+            # C = C.reshape(b, -1)
+            # D = D.reshape(b, -1)
+            #
+            # batch_matx = torch.cat((A, B, C, D), dim=1)
+            # batch_matx = batch_matx.unsqueeze(1).repeat(1, batch_y_pred.size()[1], 1)
+            #
+            # loss = F.mse_loss(batch_y_pred, batch_matx)
+
+            loss = F.mse_loss(batch_y_pred, batch_y)
+
+        else:
+            # inference-time mini-optimization: only forward the lm_head on the very last position
+            batch_y_pred = self.lm_head(x[:, [-1], :])  # note: using list [-1] to preserve the time dim
+            loss = None
+
+        return batch_y_pred, loss
+
 
     def configure_optimizers(self, weight_decay, learning_rate, betas, device_type):
         """

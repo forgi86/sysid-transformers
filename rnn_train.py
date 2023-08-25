@@ -22,14 +22,14 @@ else:
     print("GPU not available, CPU used")
 
 # arguments
-nx = 50
-nu = 3
+nx = 5
+nu = 1
 ny = 1
-seq_length = 300
-max_iters = 500000
+seq_length = 500
+max_iters = 1000000
 batch_size = 64
 
-train_ds = LinearDynamicalDataset(nx=nx, nu=nu, ny=ny, seq_len=seq_length)
+train_ds = WHDataset(nx=nx, nu=nu, ny=ny, seq_len=seq_length)
 train_dl = DataLoader(train_ds, batch_size=batch_size, num_workers=2)
 
 # Instantiate the model with hyperparameters
@@ -45,11 +45,14 @@ lr = 0.0001
 criterion = nn.MSELoss()
 optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 
+losses = []
+
 model.train()
 for itr, (batch_y, batch_u) in enumerate(train_dl):
 
-    if itr % 100000 == 0:
-        torch.save(model.state_dict(), 'trained_models/lstm_model'+str(itr))
+    if itr % 200000 == 0:
+        torch.save(model.state_dict(), 'trained_models/lstm_wh_model_'+str(itr))
+        np.save('trained_models/lstm_wh_losses_'+str(itr), np.array(losses))
     if itr >= max_iters:
         break
 
@@ -84,5 +87,6 @@ for itr, (batch_y, batch_u) in enumerate(train_dl):
         #if epoch % 10 == 0:
         print('Itr: {}, Epoch: {}/{}.............'.format(itr, epoch, n_epochs), end=' ')
         print("Loss: {:.4f}".format(loss.item()))
+        losses.append(loss.item())
 
-torch.save(model.state_dict(), 'trained_models/lstm_model')
+torch.save(model.state_dict(), 'trained_models/lstm_wh_model')
