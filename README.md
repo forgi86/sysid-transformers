@@ -1,6 +1,6 @@
 # In-context learning for model-free system identification
 
-This repository contains the Python code to reproduce the results of the paper *In-context learning for model-free system identification* (in preparation, 2023)
+This repository contains the Python code to reproduce the results of the paper [In-context learning for model-free system identification](http://arxiv.org/abs/2308.13380)
 by Marco Forgione, Filippo Pura and Dario Piga.
 
 
@@ -49,12 +49,14 @@ Experiments were performed on a Python 3.11 conda environment with
  * numpy
  * scipy
  * matplotlib
- * pytorch (>= 2.0.1)
+ * python-control
+ * pytorch (v2.0.1)
  
 These dependencies may be installed through the commands:
 
 ```
-conda install numpy scipy pandas matplotlib
+conda install numpy scipy matplotlib
+conda install -c conda-forge control slycot
 conda install pytorch -c pytorch
 ```
 
@@ -77,7 +79,7 @@ If you find this project useful, we encourage you to:
 @article{forgione2023a,
   title=In-context learning for model-free system identification},
   author={Forgione, M. and Pura, F. and Piga, D.},
-  journal={arXiv preprint arXiv:2206.12928},
+  journal={arXiv preprint arXiv:2308.13380},
   year={2022}
 } 
 ```
