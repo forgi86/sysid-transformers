@@ -3,33 +3,9 @@ import torch
 from lstm_onestep import LSTModel
 from torch import nn
 from dataset import LinearDynamicalDataset, WHDataset
+from lstm_onestep import LSTModel
 from torch.utils.data import DataLoader
 import time
-
-
-class LSTModel(nn.Module):
-    def __init__(self, input_size, output_size, hidden_dim, n_layers):
-        super(LSTModel, self).__init__()
-
-        # Defining some parameters
-        self.hidden_dim = hidden_dim
-        self.n_layers = n_layers
-
-        # Defining the layers
-        # LSTM Layer
-        self.lstm = nn.LSTM(input_size, hidden_dim, num_layers=n_layers, batch_first=True)
-
-        # Fully connected layer
-        self.fc = nn.Linear(hidden_dim, output_size)
-
-    def forward(self, x):
-
-        out, hidden = self.lstm(x)
-
-        out = self.fc(out)
-
-        return out, hidden
-
 
 # torch.cuda.is_available() checks and returns a Boolean True if a GPU is available, else it'll return False
 is_cuda = torch.cuda.is_available()
@@ -59,7 +35,7 @@ wh_dataset = False
 # Create out dir
 model_dir = Path(model_dir)
 model_dir.mkdir(exist_ok=True)
-out_file = "ckpt_onestep_wh" if wh_dataset else "ckpt_onestep_lin"
+out_file = "ckpt_onestep_wh_lstm" if wh_dataset else "ckpt_onestep_lin_lstm"
 
 if wh_dataset:
     train_ds = WHDataset(nx=nx, nu=nu, ny=ny, seq_len=seq_length)
