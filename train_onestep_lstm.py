@@ -1,5 +1,6 @@
 from pathlib import Path
 import torch
+from lstm_onestep import LSTModel
 from torch import nn
 from dataset import LinearDynamicalDataset, WHDataset
 from torch.utils.data import DataLoader
