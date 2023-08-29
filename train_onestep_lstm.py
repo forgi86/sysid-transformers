@@ -13,7 +13,7 @@ is_cuda = torch.cuda.is_available()
 # If we have a GPU available, we'll set our device to GPU. We'll use this device variable later in our code.
 if is_cuda:
     #device = torch.device("cuda")
-    device = torch.device(f'cuda:{2}')
+    device = torch.device(f'cuda:{0}')
     print("GPU is available")
 else:
     device = torch.device("cpu")
