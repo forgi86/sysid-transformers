@@ -14,7 +14,7 @@ import metrics
 
 #%% Initializations
 
-fig_path = Path("fig")
+fig_path = Path("../fig")
 fig_path.mkdir(exist_ok=True)
 
 
@@ -26,7 +26,7 @@ data_seed = 0 # Controls the input generation
 
 
 # Overall settings
-out_dir = "out"
+out_dir = "../out"
 
 # System settings
 nu = 1
