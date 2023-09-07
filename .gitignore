@@ -164,8 +164,11 @@ wandb/
 tmp/
 data
 
+.DS_store
 /doc/paper/ms.blg
 /doc/paper/ms.bbl
 /doc/paper/ms.aux
 /doc/paper/ms.out
 /doc/paper/ms.log
+/doc/slides/presentation_main.nav
+/doc/slides/presentation_main.snm
