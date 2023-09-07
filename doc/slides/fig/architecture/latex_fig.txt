@@ -1,0 +1,5 @@
+Linear $(n_u + n_y)  \rightarrow d_{\rm model}$
+
+n_{\rm layers} \;\;\times
+
+Linear $d_{\rm model} \rightarrow n_{y}$
