@@ -17,8 +17,8 @@
 % Math commands
 \newcommand{\sys}{S}
 \newcommand{\diss}{d}
-\newcommand{\learn}{\mathcal{A}} 
-\newcommand{\free}{\mathcal{M}}  
+\newcommand{\learn}{\mathcal{A}}
+\newcommand{\free}{\mathcal{M}}
 \newcommand{\D}{\mathcal{D}}
 \newcommand{\R}{\mathbb{R}}
 \newcommand{\nsamp}{N}
@@ -38,19 +38,19 @@
 {
   \usetheme{Boadilla}
   \useoutertheme{infolines}
-  \setbeamercovered{transparent} 
+  \setbeamercovered{transparent}
 }
-	
+
 
 \title[In-context learning sysid]{\textsc{In-context learning for model-free system identification}}
 
- 
+
 %\author[]{Marco Forgione\inst{1}, Filippo Pura\inst{1}, Dario Piga\inst{1}}
 \author[]{Marco Forgione, Filippo Pura, Dario Piga}
 
 \institute[IDSIA]{
-	\inst{}IDSIA Dalle Molle Institute for Artificial Intelligence SUPSI-USI, Lugano, 
-	} 
+	\inst{}IDSIA Dalle Molle Institute for Artificial Intelligence SUPSI-USI, Lugano, Switzerland
+	}
 
 
 \date[]{September 7, 2023}
@@ -74,7 +74,7 @@
 \begin{frame}{Standard system identification/supervised machine learning}
 %Standard system identification workflow:
 \begin{enumerate}
-\item Collect dataset $\D = (u_{1:N}, y_{1:N})$ of input/outputs 
+\item Collect dataset $\D = (u_{1:N}, y_{1:N})$ of input/outputs
 %$$\D = u_{1:N}, y_{1:N}$$
 from  system $\sys$.
 \item Apply an algorithm to estimate a model $M(\hat \theta)$ of $\sys$:
@@ -83,6 +83,7 @@ $$\hat \theta = \learn(\D)  \qquad \text{e.g.  }  \learn(\D)  = \arg \min_{\thet
 %$$\hat y_k = M(u_{1:k-1}; \theta^*)$$
 $$\hat y^*_{1:M} = M(u^*_{1:M}; \hat \theta)$$
 \end{enumerate}
+\pause
 Researchers keep on improving learning algorithms and model structures.\\
 Can we automate this process?
 Can we \structure{learn the learning algorithm} itself?\\
@@ -98,7 +99,7 @@ Can we \structure{learn the learning algorithm} itself?\\
 	\structure{J. Schmidhuber.}
      Evolutionary principles in self-referential learning, or on learning how to learn. \vskip -1em
      \emph{Diploma Thesis, TU Munich, 1987}
-		\end{tiny}\\	
+		\end{tiny}\\
 
 	\item[\book]
 		\begin{tiny}
@@ -106,7 +107,7 @@ Can we \structure{learn the learning algorithm} itself?\\
      Meta-Learning in Neural Networks: A Survey.
      \emph{IEEE Transactions on Pattern Analysis and Machine \vskip -1em
       Intelligence, 2022}
-		\end{tiny}\\	
+		\end{tiny}\\
 
     \end{itemize}
 
@@ -123,7 +124,7 @@ Can we \structure{learn the learning algorithm} itself?\\
 \end{itemize}
 \vskip 1em
 \pause
-Can we get better at identifying $\sys^{(i)}$ as we observe more datasets $\D^{(j)}$? 
+Can we get better at identifying $\sys^{(i)}$ as we observe more datasets $\D^{(j)}$?
 \pause
 \vskip 1em
 \begin{itemize}
@@ -132,7 +133,7 @@ Can we get better at identifying $\sys^{(i)}$ as we observe more datasets $\D^{(
 % with insight
 \end{itemize}
 \vskip 1em
-\pause  
+\pause
 Meta learning from a \structure{finite collection} would also be interesting...
 \end{frame}
 
@@ -140,17 +141,17 @@ Meta learning from a \structure{finite collection} would also be interesting...
 Many meta learning strategies around. Here focus on \structure{in-context learning}.
 \vskip 1em
 \begin{itemize}
-\item Transformers are sufficiently \structure{expressive} to represent algorithms.
-\item We train Transformers to \structure{behave} like an algorithm. We provide:
+\item \structure{Transformers} are sufficiently expressive to \structure{represent algorithms}.
+\item We train Transformers to {behave} like an algorithm. We provide:
 \begin{itemize}
-\item A \structure{context}, namely an input/output sequence of a system 
+\item A \structure{context}, namely an input/output sequence of a system
 \item A \structure{task}, like predicting the next output or simulating for more steps
 \end{itemize}
-\item The Transformer must \structure{learn to identify} the system to solve the task! 
+\item The Transformer must \structure{learn to identify} the system to solve the task!
 \end{itemize}
 \vskip 1em
 \pause
-Context + task may be seen as a \structure{prompt} to a Large Language Model, which can then 
+Context + task may be seen as a \structure{prompt} to a Large Language Model, which can then
 \structure{continue the word sequence} in an optimal way.
 
 \vskip 2em
@@ -161,15 +162,15 @@ Context + task may be seen as a \structure{prompt} to a Large Language Model, wh
 	\structure{S. Garg et al.} % A. Antoniou, P. Micaelli, and A. Strokey
      What Can Transformers Learn In-Context? A Case Study of Simple Function Classes.
      \emph{36th Conference on \vskip -1em Neural Information Processing Systems (NeurIPS 2022).}
-		\end{tiny}\\	
+		\end{tiny}\\
 
 	\item[\book]
 		\begin{tiny}
 	\structure{T. Brown et al.} % A. Antoniou, P. Micaelli, and A. Strokey
      Language Models are Few-Shot Learners.
      \emph{34th Conference on  Neural Information Processing Systems \vskip -1em (NeurIPS 2020).}
-		\end{tiny}\\	
-				
+		\end{tiny}\\
+
 \end{itemize}
 \end{frame}
 
@@ -216,16 +217,16 @@ $\hat y_{m+1:N}$
 $$\hat \phi = \arg \min_\phi \mathcal{L}_{\rm pred}(\phi)$$
 \begin{equation*}
 	\label{eq:one_step_objective}
-     \mathcal{L}_{\rm pred} = \E_{p(\D)} 
+     \mathcal{L}_{\rm pred}(\phi) = \E_{p(\D)}
     \left [ \sum_{k=1}^{\nsamp-1}
     \norm{y_{k+1} -
     \free_\phi (y_{1:k}, u_{1:k})
     }^2
     \right ]
 \end{equation*}
-
+\vskip -1.5em
 \begin{equation*}\label{eq:eq:one_step_objective_samples}
-\mathcal{L}_{\rm pred} \approx  \frac{1}{b}
+\mathcal{L}_{\rm pred}(\phi)  \approx  \frac{1}{b}
     \sum_{i=1}^b
     \sum_{k=1}^{\nsamp-1}
     \norm{y_{k+1}^{(i)} -
@@ -239,8 +240,8 @@ $$\hat \phi = \arg \min_\phi \mathcal{L}_{\rm pred}(\phi)$$
 $$\hat \phi = \arg \min_\phi \mathcal{L}_{\rm sim}(\phi)$$
 \begin{equation*}
 	\label{eq:simulation_objective}
-   \mathcal{L}_{\rm sim} \! = \!  \E_{p(\D)} 
-    \left [ 
+   \mathcal{L}_{\rm sim}(\phi)  \! = \!  \E_{p(\D)}
+    \left [
     \norm{y_{m+1:\nsamp} \! - \! \free_\phi (u_{1:m}, y_{1:m}, u_{m+1:\nsamp})
     }^2
     \right ]
@@ -248,7 +249,7 @@ $$\hat \phi = \arg \min_\phi \mathcal{L}_{\rm sim}(\phi)$$
 
 \begin{align*}
 	\label{eq:simulation_objective_samples}
-     \mathcal{L}_{\rm sim}  \approx  
+     \mathcal{L}_{\rm sim}(\phi)   \approx
     \frac{1}{b}
     \sum_{i=1}^b
     %
@@ -271,29 +272,29 @@ makes the outcome special.
 
 
 
-\begin{frame}{Transformer architectures}
-\begin{columns}[t]
-\column{.33\textwidth}
-\begin{center}
-one-step prediction:
-decoder-only ($\sim$ GPT-2)
-\begin{figure}
-\includegraphics[height=110 pt]{fig/architecture/decoder_architecture.pdf} 
-\end{figure}
-\vskip 1em
-
-\end{center}
-\column{.69\textwidth}
-\begin{center}
-multi-step simulation:\\
-encoder-decoder ($\sim$ language translation)
-\begin{figure}
-\includegraphics[height=130 pt]{fig/architecture/encoder_decoder_architecture.pdf} 
-\end{figure}
-\vskip -.8em
-
-\end{center}
-\end{columns}
+%\begin{frame}{Transformer architectures}
+%\begin{columns}[t]
+%\column{.33\textwidth}
+%\begin{center}
+%One-step prediction:
+%decoder-only ($\sim$ GPT-2)
+%\begin{figure}
+%\includegraphics[height=110 pt]{fig/architecture/decoder_architecture.pdf}
+%\end{figure}
+%\vskip 1em
+%
+%\end{center}
+%\column{.69\textwidth}
+%\begin{center}
+%Multi-step simulation:\\
+%encoder-decoder ($\sim$ language translation)
+%\begin{figure}
+%\includegraphics[height=130 pt]{fig/architecture/encoder_decoder_architecture.pdf}
+%\end{figure}
+%\vskip -.8em
+%
+%\end{center}
+%\end{columns}
 %\pause
 %\vskip 1em
 %\begin{itemize}
@@ -302,11 +303,43 @@ encoder-decoder ($\sim$ language translation)
 %	\structure{A. Vaswani et al.} % A. Antoniou, P. Micaelli, and A. Strokey
 %     Attention is all you need.
 %     \emph{30th Conference on  Neural Information Processing Systems (NeurIPS 2017).}
-%		\end{tiny}\\					
+%		\end{tiny}\\
+%\end{itemize}
+%NLP architectures modified to process \structure{real-valued input/output sequences}.
+%
+%\end{frame}
+
+\begin{frame}{Transformer architectures}
+\begin{columns}[t]
+\column{.33\textwidth}
+\begin{block}{One-step prediction:}
+\begin{figure}
+\vskip 1em
+\includegraphics[height=110 pt]{fig/architecture/decoder_architecture.pdf}
+\vskip .8em
+decoder-only ($\sim$ GPT-2)
+\end{figure}
+\end{block}
+\column{.65\textwidth}
+\begin{block}{Multi-step simulation}
+\begin{figure}
+\includegraphics[height=130 pt]{fig/architecture/encoder_decoder_architecture.pdf}
+encoder-decoder ($\sim$ language translation)
+\end{figure}
+\end{block}
+\end{columns}
+\vskip 1em
+%\begin{itemize}
+%	\item[\book]
+%		\begin{tiny}
+%	\structure{A. Vaswani et al.} % A. Antoniou, P. Micaelli, and A. Strokey
+%     Attention is all you need.
+%     \emph{30th Conference on  Neural Information Processing Systems (NeurIPS 2017).}
+%		\end{tiny}\\
 %\end{itemize}
 NLP architectures modified to process \structure{real-valued input/output sequences}.
-
 \end{frame}
+
 
 \begin{frame}{Experiments - System classes}
 One-step prediction and multi-step simulation on two system classes:
@@ -322,7 +355,7 @@ y_{k+1} &= Cx_k
 \end{align*}
 \vskip -.5em
 \begin{itemize}
-\item random system matrices
+\item Random system matrices
 \item $A$ constrained to be stable
 \end{itemize}
 \end{block}
@@ -330,7 +363,7 @@ y_{k+1} &= Cx_k
 \begin{block}{Wiener-Hammerstein (WH):}
 \vskip .8em
 \begin{figure}
-\includegraphics[width=.7\textwidth]{fig/wiener_hammerstein.pdf} 
+\includegraphics[width=.7\textwidth]{fig/wiener_hammerstein.pdf}
 \end{figure}
 \begin{itemize}
 \item Sequential LTI $\rightarrow$ $F(\cdot)$ $\rightarrow$ LTI
@@ -350,7 +383,7 @@ y_{k+1} &= Cx_k
 	\item[\github]
 		\begin{tiny}
 		\url{https://github.com/forgi86/sysid-transformers}
-		\end{tiny}\\	
+		\end{tiny}\\
  \end{itemize}
 \end{frame}
 
@@ -362,16 +395,16 @@ y_{k+1} &= Cx_k
 LTI: one sequence
 \includegraphics[width=\textwidth]{fig/lin_one_step_single.pdf}
 WH: one sequence
-\includegraphics[width=\textwidth]{fig/wh_one_step_single.pdf} 
+\includegraphics[width=\textwidth]{fig/wh_one_step_single.pdf}
 \end{figure}
 \end{center}
 \column{.5\textwidth}
 \begin{center}
 \begin{figure}
 LTI: 256 sequences
-\includegraphics[width=\textwidth]{fig/lin_one_step_batch.pdf} 
+\includegraphics[width=\textwidth]{fig/lin_one_step_batch.pdf}
 WH: 32 sequences
-\includegraphics[width=\textwidth]{fig/wh_one_step_batch.pdf} 
+\includegraphics[width=\textwidth]{fig/wh_one_step_batch.pdf}
 \end{figure}
 \end{center}
 \end{columns}
@@ -383,18 +416,18 @@ WH: 32 sequences
 \begin{center}
 \begin{figure}
 LTI: one sequence
-\includegraphics[width=\textwidth]{fig/lin_sim_single.pdf} 
+\includegraphics[width=\textwidth]{fig/lin_sim_single.pdf}
 WH: one sequence
-\includegraphics[width=\textwidth]{fig/wh_sim_single.pdf} 
+\includegraphics[width=\textwidth]{fig/wh_sim_single.pdf}
 \end{figure}
 \end{center}
 \column{.5\textwidth}
 \begin{center}
 \begin{figure}
 LTI: 256 sequences
-\includegraphics[width=\textwidth]{fig/lin_sim_batch.pdf} 
+\includegraphics[width=\textwidth]{fig/lin_sim_batch.pdf}
 WH: 32 sequences
-\includegraphics[width=\textwidth]{fig/wh_sim_batch.pdf} 
+\includegraphics[width=\textwidth]{fig/wh_sim_batch.pdf}
 \end{figure}
 \end{center}
 \end{columns}
@@ -427,7 +460,5 @@ Many possible research directions including:
 \end{small}
 \end{center}
 \end{frame}
-
-\end{document}
 
 \end{document}
