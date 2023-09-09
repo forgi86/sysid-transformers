@@ -141,8 +141,8 @@ Meta learning from a \structure{finite collection} would also be interesting...
 Many meta learning strategies around. Here focus on \structure{in-context learning}.
 \vskip 1em
 \begin{itemize}
-\item \structure{Transformers} are sufficiently expressive to \structure{represent algorithms}.
-\item We train Transformers to {behave} like an algorithm. We provide:
+\item \structure{Transformers} are expressive  as \structure{a programming language}%are sufficiently expressive to \structure{represent algorithms}.
+\item We make Transformers \structure{behave like algorithms}. We provide:
 \begin{itemize}
 \item A \structure{context}, namely an input/output sequence of a system
 \item A \structure{task}, like predicting the next output or simulating for more steps
@@ -150,7 +150,7 @@ Many meta learning strategies around. Here focus on \structure{in-context learni
 \item The Transformer must \structure{learn to identify} the system to solve the task!
 \end{itemize}
 \vskip 1em
-\pause
+%\pause
 Context + task may be seen as a \structure{prompt} to a Large Language Model, which can then
 \structure{continue the word sequence} in an optimal way.
 
@@ -159,10 +159,17 @@ Context + task may be seen as a \structure{prompt} to a Large Language Model, wh
 \begin{itemize}
 	\item[\book]
 		\begin{tiny}
+	\structure{G.~Weiss et al.} % A. Antoniou, P. Micaelli, and A. Strokey
+     Thinking like Transformers.
+     \emph{38th International Conference on Machine Learning (ICML 2022).}
+		\end{tiny}
+		
+	\item[\book]
+		\begin{tiny}
 	\structure{S. Garg et al.} % A. Antoniou, P. Micaelli, and A. Strokey
      What Can Transformers Learn In-Context? A Case Study of Simple Function Classes.
      \emph{36th Conference on \vskip -1em Neural Information Processing Systems (NeurIPS 2022).}
-		\end{tiny}\\
+		\end{tiny}
 
 	\item[\book]
 		\begin{tiny}
@@ -178,7 +185,7 @@ Context + task may be seen as a \structure{prompt} to a Large Language Model, wh
 \begin{columns}[t]
 \column{.48\textwidth}
 \begin{block}{One-step prediction:}
-$$\hat y_{k+1} = \free_\phi(u_{1:k}, y_{1:k}).$$
+$$\hat y_{k+1} = \free_\phi(u_{1:k}, y_{1:k})$$
 \begin{itemize}
 \item $(u_1, y_1) \rightarrow \hat y_2$
 \item $(u_{1:2}, y_{1:2}) \rightarrow \hat y_3$
@@ -189,16 +196,21 @@ $$\hat y_{k+1} = \free_\phi(u_{1:k}, y_{1:k}).$$
 \end{block}
 \column{.48\textwidth}
 \begin{block}{Multi-step simulation}
+\vskip -1em
 $$\hat y_{m+1:N} = \free_\phi(u_{1:m}, y_{1:m}, u_{m+1:N})$$
-\vskip .8em
+%\vskip .8em
 Meta-model receives:
-\begin{itemize}
+\begin{enumerate}
 \item Full input/output $(u_{1:m}, y_{1:m})$
 \item Input-only trajectory $u_{m+1:\nsamp}$
-\end{itemize}
-\vskip 1em
+\end{enumerate}
+%\vskip 1em
 and generates simulation:
 $\hat y_{m+1:N}$
+\vskip 1em
+\begin{itemize}
+\item $u_{1:m}, y_{1:m}, u_{m+1:N} \rightarrow \hat y_{m+1:N}$
+\end{itemize}
 \end{block}
 \end{columns}
 \pause
