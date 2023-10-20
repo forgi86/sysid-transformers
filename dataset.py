@@ -34,6 +34,38 @@ class LinearDynamicalDataset(IterableDataset):
             yield torch.tensor(y), torch.tensor(u)
 
 
+class LinearDynamicalDatasetNb(IterableDataset):
+    def __init__(self, nx=5, nu=1, ny=1, random_order=True, seq_len=500,  dtype="float32", normalize=True,
+                **mdlargs):
+        super(LinearDynamicalDatasetNb).__init__()
+        self.nx = nx
+        self.nu = nu
+        self.ny = ny
+        self.random_order = True
+        self.seq_len = seq_len
+        self.mdlargs = mdlargs # strictly_proper=True, mag_range=(0.5, 0.97), phase_range=(0, math.pi / 2)
+        self.dtype = dtype
+        self.normalize = normalize
+
+    def __iter__(self):
+        while True:  # infinite dataset
+            # for _ in range(1000):
+            G = drss_matrices(states=np.random.randint(1, self.nx+1) if self.random_order else self.nx,
+                               inputs=self.nu,
+                               outputs=self.ny,
+                               **self.mdlargs)
+            #print(G[0])
+            u = np.random.randn(self.seq_len, self.nu)
+            y = dlsim(*G, u)
+            if self.normalize:
+                y = (y - y.mean(axis=0)) / (y.std(axis=0) + 1e-6)
+
+            u = u.astype(self.dtype)
+            y = y.astype(self.dtype)
+
+            yield torch.tensor(y), torch.tensor(u)
+
+
 class WHDataset(IterableDataset):
     def __init__(self, nx=5, nu=1, ny=1, seq_len=600, random_order=True,
                  strictly_proper=True, normalize=True, dtype="float32",
@@ -208,11 +240,29 @@ class PWHDataset(IterableDataset):
 
             yield torch.tensor(y), torch.tensor(u)
 
-            
+
+class MultiIterableDataSet(IterableDataset):
+    def __init__(self, datasets):
+        self.datasets = datasets
+
+    def __iter__(self):
+        iterators = [iter(dataset) for dataset in self.datasets]
+
+        while True:
+            dataset_index = torch.randint(low=0, high=len(iterators), size=(1,))[0] # or any other dataset sampling logic...
+            yield next(iterators[dataset_index])
+                        
 if __name__ == "__main__":
-    train_ds = WHDataset(nx=2, seq_len=4, mag_range=(0.5, 0.96),
-                         phase_range=(0, math.pi / 3),
-                         system_seed=42, data_seed=445, fixed_system=False)
+
+
+
+    # Create data loader
+    mdlargs = {"strictly_proper":True, "mag_range": (0.8, 0.97), "phase_range": (0, math.pi / 2)}
+    train_ds = LinearDynamicalDatasetNb(nx=5, nu=1, ny=1, seq_len=500, **mdlargs)
+
+    #train_ds = WHDataset(nx=2, seq_len=4, mag_range=(0.5, 0.96),
+    #                     phase_range=(0, math.pi / 3),
+    #                     system_seed=42, data_seed=445, fixed_system=False)
     # train_ds = LinearDynamicalDataset(nx=5, nu=2, ny=3, seq_len=1000)
     train_dl = DataLoader(train_ds, batch_size=2)
     batch_y, batch_u = next(iter(train_dl))

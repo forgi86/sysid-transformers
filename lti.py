@@ -18,6 +18,7 @@ def drss_matrices(
 
     """
 
+    #print (mag_range, phase_range)
     if rng is None:
         rng = default_rng(None)
     # Probability of repeating a previous root.
