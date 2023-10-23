@@ -35,24 +35,32 @@ class LinearDynamicalDataset(IterableDataset):
 
 
 class LinearDynamicalDatasetNb(IterableDataset):
-    def __init__(self, nx=5, nu=1, ny=1, random_order=True, seq_len=500,  dtype="float32", normalize=True,
+    def __init__(self, nx=5, nu=1, ny=1, random_order=True, seq_len=500,  dtype="float32", normalize=True, system_seed=None,
                 **mdlargs):
         super(LinearDynamicalDatasetNb).__init__()
         self.nx = nx
         self.nu = nu
         self.ny = ny
-        self.random_order = True
+        self.random_order = random_order
         self.seq_len = seq_len
         self.mdlargs = mdlargs # strictly_proper=True, mag_range=(0.5, 0.97), phase_range=(0, math.pi / 2)
         self.dtype = dtype
         self.normalize = normalize
+        self.system_seed = system_seed
 
     def __iter__(self):
+
+        if self.system_seed is not None:
+            rng = np.random.default_rng(self.system_seed)
+        else:
+            rng = None
+
         while True:  # infinite dataset
             # for _ in range(1000):
             G = drss_matrices(states=np.random.randint(1, self.nx+1) if self.random_order else self.nx,
                                inputs=self.nu,
                                outputs=self.ny,
+                               rng=rng,
                                **self.mdlargs)
             #print(G[0])
             u = np.random.randn(self.seq_len, self.nu)
