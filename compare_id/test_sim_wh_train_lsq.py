@@ -103,6 +103,7 @@ if __name__ == "__main__":
     n_rep = 20
     num_iter = 50_000
     y_rep = []
+    batch_y_ctx = batch_y_ctx + noise_std * torch.randn(batch_y_ctx.shape) # corrupt context output data
     for rep in range(n_rep):
         print(f"Training repetition {rep}")
         y_sim_full = []
@@ -110,7 +111,7 @@ if __name__ == "__main__":
             #print(f"Fitting sequence {seq_idx+1}")
             
             model = train_model(batch_u_ctx[[seq_idx]],
-                                batch_y_ctx[[seq_idx]]  + noise_std * torch.randn(batch_y_ctx[[seq_idx]].shape), num_iter=50_000)
+                                batch_y_ctx[[seq_idx]], num_iter=50_000)
             
             with torch.no_grad():
                 y_sim_full.append(
