@@ -88,6 +88,8 @@ class WHDataset(IterableDataset):
         self.normalize = normalize
         self.strictly_proper = strictly_proper
         self.random_order = random_order  # random number of states from 1 to nx
+        self.system_seed = system_seed
+        self.data_seed = data_seed
         self.system_rng = np.random.default_rng(system_seed)  # source of randomness for model generation
         self.data_rng = np.random.default_rng(data_seed)  # source of randomness for model generation
         self.fixed_system = fixed_system  # same model at each iteration (classical identification)
@@ -172,6 +174,14 @@ class WHDataset(IterableDataset):
             y = y.astype(self.dtype)
 
             yield torch.tensor(y), torch.tensor(u)
+            
+
+def seed_worker(worker_id):
+    worker_info = torch.utils.data.get_worker_info()
+    dataset = worker_info.dataset
+    worker_id = worker_info.id
+    dataset.data_rng = np.random.default_rng(dataset.data_seed + 1000*worker_id)
+    dataset.system_rng = np.random.default_rng(dataset.system_seed + 1000*worker_id)
 
 
 class PWHDataset(IterableDataset):

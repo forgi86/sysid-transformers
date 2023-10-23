@@ -4,7 +4,7 @@ import torch
 import numpy as np
 import math
 from functools import partial
-from dataset import WHDataset, LinearDynamicalDataset
+from dataset import LinearDynamicalDatasetNb
 from torch.utils.data import DataLoader
 from transformer_sim import Config, TSTransformer
 from transformer_onestep import warmup_cosine_lr
@@ -32,8 +32,8 @@ if __name__ == '__main__':
                         help='disables CUDA training')
 
     # Dataset
-    parser.add_argument('--nx', type=int, default=5, metavar='N',
-                        help='model order (default: 5)')
+    parser.add_argument('--nx', type=int, default=10, metavar='N',
+                        help='model order (default: 10)')
     parser.add_argument('--nu', type=int, default=1, metavar='N',
                         help='model order (default: 5)')
     parser.add_argument('--ny', type=int, default=1, metavar='N',
@@ -42,12 +42,6 @@ if __name__ == '__main__':
                         help='sequence length (default: 300)')
     parser.add_argument('--seq-len-new', type=int, default=100, metavar='N',
                         help='sequence length (default: 300)')
-    parser.add_argument('--mag_range', type=tuple, default=(0.5, 0.97), metavar='N',
-                        help='sequence length (default: 600)')
-    parser.add_argument('--phase_range', type=tuple, default=(0.0, math.pi/2), metavar='N',
-                        help='sequence length (default: 600)')
-    parser.add_argument('--fixed-system', action='store_true', default=False,
-                        help='If True, keep the same model all the times')
 
     # Model
     parser.add_argument('--n-layer', type=int, default=12, metavar='N',
@@ -84,7 +78,7 @@ if __name__ == '__main__':
                         help='number of CPU threads (default: 10)')
     parser.add_argument('--no-cuda', action='store_true', default=False,
                         help='disables CUDA training')
-    parser.add_argument('--cuda-device', type=str, default="cuda:0", metavar='S',
+    parser.add_argument('--cuda-device', type=str, default="cuda:2", metavar='S',
                         help='cuda device (default: "cuda:0")')
     parser.add_argument('--compile', action='store_true', default=False,
                         help='disables CUDA training')
@@ -127,8 +121,12 @@ if __name__ == '__main__':
     device_type = 'cuda' if 'cuda' in device_name else 'cpu'
     torch.set_float32_matmul_precision("high")
 
+    #mdlargs_A = {"strictly_proper":True, "mag_range": (0.8, 0.97), "phase_range": (0, math.pi / 2)}
+    #mdlargs_B = {"strictly_proper":True, "mag_range": (0.5, 0.75), "phase_range": (math.pi / 2, math.pi)}
+    mdlargs = {"strictly_proper":True, "mag_range": (0.5, 0.97), "phase_range": (0, math.pi/2)}
+
     # Create data loader
-    train_ds = LinearDynamicalDataset(nx=cfg.nx, nu=cfg.nu, ny=cfg.ny, seq_len=cfg.seq_len_ctx+cfg.seq_len_new)
+    train_ds = LinearDynamicalDatasetNb(nx=cfg.nx, nu=cfg.nu, ny=cfg.ny, seq_len=cfg.seq_len_ctx+cfg.seq_len_new, **mdlargs)
     #train_ds = WHDataset(nx=cfg.nx, nu=cfg.nu, ny=cfg.ny, seq_len=cfg.seq_len_ctx+cfg.seq_len_new,
     #                     mag_range=cfg.mag_range, phase_range=cfg.phase_range,
     #                     system_seed=cfg.seed, data_seed=cfg.seed+1, fixed_system=cfg.fixed_system)
@@ -139,7 +137,7 @@ if __name__ == '__main__':
     #                   mag_range=cfg.mag_range, phase_range=cfg.phase_range,
     #                   system_seed=cfg.seed if cfg.fixed_system else cfg.seed+2,
     #                   data_seed=cfg.seed+3, fixed_system=cfg.fixed_system)
-    val_ds = LinearDynamicalDataset(nx=cfg.nx, nu=cfg.nu, ny=cfg.ny, seq_len=cfg.seq_len_ctx+cfg.seq_len_new)
+    val_ds = LinearDynamicalDatasetNb(nx=cfg.nx, nu=cfg.nu, ny=cfg.ny, seq_len=cfg.seq_len_ctx+cfg.seq_len_new, **mdlargs)
     val_dl = DataLoader(val_ds, batch_size=cfg.eval_batch_size, num_workers=cfg.threads)
 
     model_args = dict(n_layer=cfg.n_layer, n_head=cfg.n_head, n_embd=cfg.n_embd, n_y=1, n_u=1,
