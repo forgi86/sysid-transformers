@@ -162,7 +162,8 @@ cython_debug/
 out/
 wandb/
 tmp/
-data
+data/
+fig/
 
 .DS_store
 /doc/paper/ms.blg
