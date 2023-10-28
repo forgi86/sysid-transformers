@@ -10,7 +10,7 @@ seq_len_ctx = 400;
 err = zeros(batch_size, 1);
 y_sim_all = zeros(batch_size, seq_len);
 
-noise_std = 0.1;
+noise_std = 0.0;
 for batch_idx=1:batch_size
     u = double(data.batch_u(batch_idx, :));
     u = u(:);
