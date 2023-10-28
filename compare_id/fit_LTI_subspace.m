@@ -24,15 +24,10 @@ for batch_idx=1:batch_size
     u_id = u(1:seq_len_ctx);
     idata = iddata(y_id, u_id);
     idata_full = iddata(y, u);
-    %model = n4sid(idata, 5);
-    model = n4sid(idata, 10, "InitialState", "estimate", "focus", "simulation");
-    %model = n4sid(idata);%, "InitialState", "estimate", "focus", "simulation");
-    %model = n4sid(idata, [], "InitialState", "estimate", "focus", "simulation");
-    %model = oe([9 10 1]);
-    %model = oe(idata, [9 10 1], "InitialState", "estimate", "focus", "simulation");
-    %model = arx(idata, [9 10 1], "InitialState", "estimate", "focus", "simulation");
-    %x0 = model.Report.Parameters.X0;
 
+    model = n4sid(idata, 10, "InitialState", "estimate", "focus", "simulation");
+    %model = n4sid(idata, [], "InitialState", "estimate", "focus", "simulation"); % estimate state dimension
+    %x0 = model.Report.Parameters.X0;
 
     %y_sim = sim(model, u, "InitialState", x0);
     y_sim = compare(idata_full, model);
@@ -49,9 +44,9 @@ plot(data.batch_y(worst_idx, :))
 hold on
 plot(y_sim_all(worst_idx, :), "r")
 
-% 0 noise: 0.007
-% 0.1 noise: 0.09
-% 0.2 noise: 0.11 / 
-% 0.3 noise: 0.13
-% 0.4 noise: 0.17
-% 0.5 noise: 0.19
+% 0 noise: 0.0073
+% 0.1 noise: 0.0922
+% 0.2 noise: 0.1113
+% 0.3 noise: 0.1301
+% 0.4 noise: 0.1476
+% 0.5 noise: 0.1651 
