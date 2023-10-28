@@ -173,3 +173,7 @@ fig/
 /doc/paper/ms.log
 /doc/slides/presentation_main.nav
 /doc/slides/presentation_main.snm
+doc/slides/presentation_main.aux
+doc/slides/presentation_main.synctex.gz
+doc/slides/presentation_main.toc
+doc/slides/presentation_main.out
