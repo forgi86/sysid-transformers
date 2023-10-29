@@ -36,21 +36,22 @@ The scripts above except ``train_onestep_lin.py`` accept command-line arguments 
 For instance, the large one-step-ahead Transformer for the WH class described in the paper may be trained with the command:
 
 ```
-python train_onestep_wh.py --out-file ckpt_onestep_wh_large --seq-len 1024  --n-layer 12 --n-head 12 --n-embd 768 --batch-size 20 --cuda-device cuda:1
+python train_onestep_wh.py --out-file ckpt_onestep_wh_large --seq-len 1024  --n-layer 12 --n-head 12 --n-embd 768 --batch-size 20
 ```
 
-Already-trained weights of all the Transformers discussed in the example reported in the paper are available as assets in the [v0.2 Release](https://github.com/forgi86/sysid-transformers/releases/tag/v0.2).
+Trained weights of all the Transformers discussed in the example reported in the paper are available as assets in the [v0.3 Release](https://github.com/forgi86/sysid-transformers/releases/tag/v0.3).
 
 Jupyter notebooks that load the trained model and make predictions/simulations on new data are also available in the repo, e.g. [test_onestep_lin.ipynb](test_onestep_lin.ipynb) for one-step prediction on the LTI class.
 
 # Software requirements
-Experiments were performed on a Python 3.11 conda environment with
+Experiments were performed on a Python 3.11 conda environment with:
 
  * numpy
  * scipy
  * matplotlib
  * python-control
- * pytorch (v2.0.1)
+ * pytorch (v2.1.0)
+ * pytorch-ident
  
 These dependencies may be installed through the commands:
 
@@ -60,8 +61,18 @@ conda install -c conda-forge control slycot
 conda install pytorch -c pytorch
 ```
 
+For more details on pytorch installation options (e.g. support for CUDA acceleration), please refer to the official [installation instructions](https://pytorch.org/get-started/locally/).
+
+The following packages are also useful:
+
+```
+conda install jupyter # (optional, to run the test jupyter notebooks)
+pip install wandb # (optional, for experiment logging & monitoring)
+pip install pytorch-ident # (optional, for the comparisons with non-linear least squares on the WH model class)
+```
+
 # Hardware requirements
-While the scripts can run on CPU, execution may be frustratingly slow. For faster training, a GPU is highly recommended.
+While all the scripts can run on CPU, execution may be frustratingly slow. For faster training, a GPU is highly recommended.
 To run the paper's examples, we utilized a dedicated server equipped with an nVidia RTX 3090 GPU.
 
 <!--
