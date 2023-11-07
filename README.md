@@ -73,7 +73,7 @@ pip install pytorch-ident # (optional, for the comparisons with non-linear least
 
 # Hardware requirements
 While all the scripts can run on CPU, execution may be frustratingly slow. For faster training, a GPU is highly recommended.
-To run the paper's examples, we utilized a dedicated server equipped with an nVidia RTX 3090 GPU.
+To run the paper's examples, we used a server equipped with an nVidia RTX 3090 GPU.
 
 <!--
 
