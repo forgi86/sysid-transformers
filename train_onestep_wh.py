@@ -28,63 +28,63 @@ if __name__ == '__main__':
     parser.add_argument('--seed', type=int, default=42, metavar='N',
                         help='Seed for random number generation')
     parser.add_argument('--log-wandb', action='store_true', default=False,
-                        help='disables CUDA training')
+                        help='Use wandb for data logging')
 
     # Dataset
     parser.add_argument('--nx', type=int, default=5, metavar='N',
-                        help='model order (default: 5)')
+                        help='Model order nx (default: 5)')
     parser.add_argument('--nu', type=int, default=1, metavar='N',
-                        help='model order (default: 5)')
+                        help='Number of inputs nu (default: 1)')
     parser.add_argument('--ny', type=int, default=1, metavar='N',
-                        help='model order (default: 5)')
+                        help='Number of outputs (default: 1)')
     parser.add_argument('--seq-len', type=int, default=600, metavar='N',
-                        help='sequence length (default: 600)')
+                        help='Sequence length (default: 600)')
     parser.add_argument('--mag_range', type=tuple, default=(0.5, 0.97), metavar='N',
-                        help='sequence length (default: 600)')
+                        help='Magnitude range of the synthetic systems polse (default: (0.5, 0.97))')
     parser.add_argument('--phase_range', type=tuple, default=(0.0, math.pi/2), metavar='N',
-                        help='sequence length (default: 600)')
+                        help='Phase range of the synthetic systems polse (default: (0.0, pi/2))')
     parser.add_argument('--fixed-system', action='store_true', default=False,
-                        help='If True, keep the same model all the times')
+                        help='If True, generate data from a single random system')
 
     # Model
     parser.add_argument('--n-layer', type=int, default=12, metavar='N',
-                        help='number of iterations (default: 1M)')
+                        help='Number of layers (default: 12)')
     parser.add_argument('--n-head', type=int, default=4, metavar='N',
-                        help='number of iterations (default: 1M)')
+                        help='Number heads (default: 4)')
     parser.add_argument('--n-embd', type=int, default=128, metavar='N',
-                        help='number of iterations (default: 1M)')
+                        help='Embedding size (default: 128)')
     parser.add_argument('--dropout', type=float, default=0.0, metavar='LR',
-                        help='learning rate (default: 1e-4)')
+                        help='Dropout (default: 0.0)')
     parser.add_argument('--bias', action='store_true', default=False,
-                        help='bias in model')
+                        help='Use bias in model')
 
     # Training
     parser.add_argument('--batch-size', type=int, default=32, metavar='N',
-                        help='batch size (default:32)')
+                        help='Batch size (default:32)')
     parser.add_argument('--max-iters', type=int, default=1_000_000, metavar='N',
-                        help='number of iterations (default: 1M)')
+                        help='Number of iterations (default: 1000000)')
     parser.add_argument('--warmup-iters', type=int, default=10_000, metavar='N',
-                        help='number of iterations (default: 1000)')
+                        help='Number of warmup iterations (default: 10000)')
     parser.add_argument('--lr', type=float, default=6e-4, metavar='LR',
-                        help='learning rate (default: 1e-4)')
+                        help='Learning rate (default: 6e-4)')
     parser.add_argument('--weight-decay', type=float, default=0.0, metavar='D',
-                        help='weight decay (default: 1e-4)')
+                        help='Optimizer weight decay (default: 0.0)')
     parser.add_argument('--eval-interval', type=int, default=2000, metavar='N',
-                        help='batch size (default:32)')
+                        help='Frequency of performance evaluation (default:2000)')
     parser.add_argument('--eval-iters', type=int, default=100, metavar='N',
-                        help='batch size (default:32)')
+                        help='Number of batches used for performance evaluation')
     parser.add_argument('--fixed-lr', action='store_true', default=False,
-                        help='disables CUDA training')
+                        help='Keep the learning rate constant, do not use cosine scheduling')
 
     # Compute
     parser.add_argument('--threads', type=int, default=10,
-                        help='number of CPU threads (default: 10)')
+                        help='Number of CPU threads (default: 10)')
     parser.add_argument('--no-cuda', action='store_true', default=False,
-                        help='disables CUDA training')
+                        help='Disables CUDA training')
     parser.add_argument('--cuda-device', type=str, default="cuda:0", metavar='S',
-                        help='cuda device (default: "cuda:0")')
+                        help='Cuda device (default: "cuda:0")')
     parser.add_argument('--compile', action='store_true', default=False,
-                        help='disables CUDA training')
+                        help='Compile the model with torch.compile')
 
     cfg = parser.parse_args()
 
@@ -137,7 +137,7 @@ if __name__ == '__main__':
                        data_seed=cfg.seed+3, fixed_system=cfg.fixed_system)
     val_dl = DataLoader(val_ds, batch_size=cfg.eval_batch_size, num_workers=cfg.threads)
 
-    model_args = dict(n_layer=cfg.n_layer, n_head=cfg.n_head, n_embd=cfg.n_embd, n_y=1, n_u=1, block_size=cfg.block_size,
+    model_args = dict(n_layer=cfg.n_layer, n_head=cfg.n_head, n_embd=cfg.n_embd, n_y=cfg.ny, n_u=cfg.nu, block_size=cfg.block_size,
                       bias=cfg.bias, dropout=cfg.dropout)  # start with model_args from command line
 
     if cfg.init_from == "scratch":
