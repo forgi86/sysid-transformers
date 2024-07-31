@@ -1,0 +1,26 @@
+
+// For format details, see https://aka.ms/devcontainer.json. For config options, see the
+// README at: https://github.com/devcontainers/templates/tree/main/src/python
+{
+	"name": "Python 3",
+	// Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
+	//"image": "mcr.microsoft.com/devcontainers/python:0-3.11",
+	//"image": "pytorch/pytorch:latest",
+	"build": { "dockerfile": "Dockerfile" },
+	// Features to add to the dev container. More info: https://containers.dev/features.
+	// "features": {},
+
+	"customizations": {
+		"vscode": {
+			"extensions":["ms-python.python", "ms-toolsai.jupyter", "ms-azuretools.vscode-docker", "ms-python.black-formatter"]
+		}
+	},
+
+	// Use 'postCreateCommand' to run commands after the container is created.
+	//"postCreateCommand": "pip install -r requirements.txt && conda install -y numba && conda install -c pytorch -y torchtext",
+	//"postCreateCommand": "pip install -r requirements.txt",
+
+	"runArgs": ["--gpus", "all"]  // , "--shm-size=512m"]
+	// Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
+	// "remoteUser": "root"
+}
